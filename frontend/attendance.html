@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Điểm Danh - EduPulse</title>
+<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#06040d">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={darkMode:'class',theme:{extend:{colors:{brand:{50:'#f5f3ff',100:'#ede9fe',500:'#8b5cf6',600:'#7c3aed',700:'#6d28d9',950:'#06040d'}}}}};</script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="assets/css/shared.css">
+</head>
+<body class="bg-brand-950 text-slate-100 font-sans min-h-screen relative overflow-x-hidden">
+<div id="toast-notif-box" class="fixed top-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
+<div class="flex h-screen relative z-10 overflow-hidden">
+  <aside id="sidebar-slot"></aside>
+  <main class="flex-1 flex flex-col overflow-y-auto p-4 lg:p-6">
+    <header class="flex items-center justify-between mb-6 glass-panel p-4 rounded-3xl shadow-xl">
+      <div class="flex items-center gap-4">
+        <button class="lg:hidden p-3 rounded-2xl bg-white/5" onclick="document.getElementById('mobile-drawer').classList.toggle('hidden')"><i class="fa-solid fa-bars"></i></button>
+        <h2 class="text-xl lg:text-2xl font-black"><i class="fa-solid fa-clipboard-check text-amber-400 mr-2"></i>Điểm Danh Học Vụ</h2>
+      </div>
+    </header>
+    <div id="mobile-drawer" class="hidden lg:hidden glass-panel rounded-3xl mb-4"><div id="mobile-nav-slot"></div></div>
+
+    <div class="glass-panel p-5 rounded-3xl mb-6 flex flex-wrap gap-3 items-end">
+      <div>
+        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Lớp học</label>
+        <select id="att-class" class="input-field" onchange="renderStudentRows()"></select>
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Ngày</label>
+        <input type="date" id="att-date" class="input-field">
+      </div>
+      <button onclick="saveAttendance()" class="btn-primary text-xs"><i class="fa-solid fa-floppy-disk mr-1"></i>Lưu Điểm Danh</button>
+    </div>
+
+    <div id="att-rows" class="glass-panel rounded-3xl divide-y divide-white/5"></div>
+  </main>
+</div>
+
+<script src="assets/js/particles.js"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/cursor.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/layout.js"></script>
+<script>
+  let classes = [];
+  if (EduLayout.guard('attendance')) { init(); }
+
+  async function init() {
+    document.getElementById('att-date').value = new Date().toISOString().slice(0, 10);
+    const res = await EduAPI.request('/api/classes');
+    classes = res.classes;
+    document.getElementById('att-class').innerHTML = classes.map(c => `<option value="${c.id}">${c.name}</option>`).join('') || '<option value="">Chưa có lớp học</option>';
+    renderStudentRows();
+  }
+
+  async function renderStudentRows() {
+    const classId = document.getElementById('att-class').value;
+    const klass = classes.find(c => c.id === classId);
+    const container = document.getElementById('att-rows');
+    if (!klass || !klass.studentIds.length) {
+      container.innerHTML = '<p class="p-6 text-sm text-slate-500">Lớp học chưa có sinh viên nào. Hãy thêm sinh viên vào lớp trước.</p>';
+      return;
+    }
+    const { users } = await EduAPI.request('/api/users/directory');
+    container.innerHTML = klass.studentIds.map(sid => {
+      const u = users.find(x => x.id === sid);
+      return `
+      <div class="p-4 flex items-center justify-between gap-3">
+        <span class="text-sm font-bold">${u ? (u.fullName || u.username) : sid}</span>
+        <select data-student="${sid}" class="att-status select-field text-xs font-bold" style="padding:0.5rem 2rem 0.5rem 0.9rem;width:auto;">
+          <option value="present">Có mặt</option>
+          <option value="late">Đi trễ</option>
+          <option value="excused">Có phép</option>
+          <option value="absent">Vắng</option>
+        </select>
+      </div>`;
+    }).join('');
+  }
+
+  async function saveAttendance() {
+    const classId = document.getElementById('att-class').value;
+    const date = document.getElementById('att-date').value;
+    if (!classId) return EduAPI.toast('Vui lòng chọn lớp học.', 'error');
+    const records = Array.from(document.querySelectorAll('.att-status')).map(sel => ({ studentId: sel.dataset.student, status: sel.value }));
+    try {
+      await EduAPI.request('/api/attendance', { method: 'POST', body: { classId, date, records } });
+      EduAPI.toast('Đã lưu điểm danh.', 'success');
+    } catch (err) { EduAPI.toast(err.message, 'error'); }
+  }
+</script>
+</body>
+</html>
