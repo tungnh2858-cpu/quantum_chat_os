@@ -1,0 +1,15 @@
+{
+  "name": "edupulse-frontend",
+  "version": "1.0.0",
+  "description": "Quantum Chat OS / EduPulse frontend — static HTML + locally-built Tailwind CSS (no CDN in production).",
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -c tailwind.config.js -i ./src/tailwind-input.css -o ./assets/css/tailwind.css --minify",
+    "watch:css": "tailwindcss -c tailwind.config.js -i ./src/tailwind-input.css -o ./assets/css/tailwind.css --watch"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.5.4",
+    "postcss": "^8.5.26",
+    "tailwindcss": "^3.4.19"
+  }
+}
