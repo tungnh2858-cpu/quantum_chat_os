@@ -5,8 +5,7 @@
 <title>Quantum Chat OS — Bảng Tin</title>
 <link rel="manifest" href="manifest.json"><meta name="theme-color" content="#06040d">
 <link rel="icon" type="image/svg+xml" href="assets/img/quantum-chat-logo.svg"><link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
-<script src="https://cdn.tailwindcss.com"></script>
-<script>tailwind.config={darkMode:'class',theme:{extend:{colors:{brand:{50:'#f5f3ff',100:'#ede9fe',500:'#8b5cf6',600:'#7c3aed',700:'#6d28d9',950:'#06040d'}}}}};</script>
+<link rel="stylesheet" href="assets/css/tailwind.built.css">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="assets/css/shared.css">
@@ -191,7 +190,7 @@
 
   function avatarHtml(u, size = 9) {
     const initials = (u.fullName || u.username || '?').trim().split(/\s+/).slice(-2).map(s => s[0]).join('').toUpperCase();
-    return u.avatar ? `<img src="${EduAPI.fileUrl(u.avatar)}" class="w-${size} h-${size} rounded-full object-cover">` : `<div class="avatar-initial w-${size} h-${size} text-xs">${initials}</div>`;
+    return u.avatar ? `<img src="${EduAPI.fileUrl(u.avatar)}" class="w-${size} h-${size} rounded-full object-cover" onerror="this.onerror=null;this.src=&quot;assets/img/broken-image.svg&quot;;this.classList.add(&quot;opacity-40&quot;)">` : `<div class="avatar-initial w-${size} h-${size} text-xs">${initials}</div>`;
   }
   function nameHtml(u) { return `${escapeHtml(u.fullName || u.username)}${EduLayout.verifiedBadge(u)}`; }
   function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
@@ -254,7 +253,7 @@
     const extra = urls.length - 4;
     return `<div class="img-grid ${gridClass(shown.length)} mb-2">${shown.map((u, i) => `
       <div style="position:relative">
-        <img src="${u}">
+        <img src="${u}" onerror="this.onerror=null;this.src='assets/img/broken-image.svg'">
         ${i === 3 && extra > 0 ? `<div style="position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1.25rem">+${extra}</div>` : ''}
       </div>`).join('')}</div>`;
   }
@@ -355,7 +354,7 @@
       </div>`;
     html += groups.map((g, gi) => g.author ? `
       <div class="story-bubble" onclick="viewStory(${gi})">
-        <div class="story-ring"><img src="${EduAPI.fileUrl(g.stories[0].image)}" class="story-thumb"></div>
+        <div class="story-ring"><img src="${EduAPI.fileUrl(g.stories[0].image)}" class="story-thumb" onerror="this.onerror=null;this.src='assets/img/broken-image.svg'"></div>
         <p class="text-[10px] text-center mt-1 font-bold truncate w-[88px]">${g.author.id === me.id ? 'Tin của bạn' : (g.author.fullName || g.author.username)}</p>
       </div>` : '').join('');
     document.getElementById('stories-bar').innerHTML = html;

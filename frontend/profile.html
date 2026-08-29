@@ -5,8 +5,7 @@
 <title>Trang cá nhân — Quantum Chat OS</title>
 <link rel="manifest" href="manifest.json"><meta name="theme-color" content="#06040d">
 <link rel="icon" type="image/svg+xml" href="assets/img/quantum-chat-logo.svg"><link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
-<script src="https://cdn.tailwindcss.com"></script>
-<script>tailwind.config={darkMode:'class',theme:{extend:{colors:{brand:{50:'#f5f3ff',100:'#ede9fe',500:'#8b5cf6',600:'#7c3aed',700:'#6d28d9',950:'#06040d'}}}}};</script>
+<link rel="stylesheet" href="assets/css/tailwind.built.css">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="assets/css/shared.css">
@@ -22,6 +21,21 @@
   .photos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px}
   .photos-grid img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:.6rem}
   .friends-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.75rem}
+  .img-grid{display:grid;gap:3px;border-radius:1rem;overflow:hidden}
+  .img-grid img{width:100%;height:100%;object-fit:cover;display:block}
+  .g1{grid-template-columns:1fr}
+  .g1 img{max-height:420px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g2 img{height:240px}
+  .g3{grid-template-columns:2fr 1fr;grid-template-rows:1fr 1fr}
+  .g3 img:first-child{grid-row:1/3}
+  .g3 img{height:100%}
+  .g4{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+  .g4 img{height:180px}
+  .compose-thumb{position:relative;flex:0 0 auto;width:88px;height:88px;border-radius:.75rem;overflow:hidden;cursor:grab}
+  .compose-thumb img{width:100%;height:100%;object-fit:cover}
+  .compose-thumb .rm{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.6);color:#fff;width:20px;height:20px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-size:10px}
+  .compose-thumb.drag-over{outline:2px dashed #00f0ff}
 </style>
 </head>
 <body class="bg-brand-950 text-slate-100 font-sans min-h-screen relative overflow-x-hidden">
@@ -75,7 +89,35 @@
           <button class="tab-btn" id="tab-photos-btn" onclick="switchTab('photos')"><i class="fa-solid fa-images mr-1"></i>Ảnh</button>
           <button class="tab-btn" id="tab-friends-btn" onclick="switchTab('friends')"><i class="fa-solid fa-user-group mr-1"></i>Bạn bè</button>
         </div>
-        <div id="posts-tab"><div id="profile-feed"></div></div>
+        <div id="posts-tab">
+          <div id="profile-composer" class="hidden glass-panel p-4 rounded-3xl mb-4">
+            <textarea id="post-content" class="input-field" rows="3" placeholder="Bạn đang nghĩ gì?"></textarea>
+            <div id="compose-thumbs" class="flex gap-2 overflow-x-auto mt-3"></div>
+            <div id="compose-video-preview" class="mt-3 hidden relative rounded-2xl overflow-hidden bg-black">
+              <video id="compose-video-el" class="w-full max-h-64 object-contain" controls muted></video>
+              <button onclick="removeComposeVideo()" class="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/70 text-white flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="flex items-center justify-between mt-3 flex-wrap gap-2">
+              <div class="flex items-center gap-2">
+                <label class="file-field-btn cursor-pointer text-xs" style="display:inline-flex;align-items:center;gap:.4rem">
+                  <i class="fa-solid fa-images"></i> Thêm ảnh
+                  <input type="file" id="post-images" accept="image/*" multiple class="hidden">
+                </label>
+                <label class="file-field-btn cursor-pointer text-xs" style="display:inline-flex;align-items:center;gap:.4rem">
+                  <i class="fa-solid fa-video"></i> Thêm video
+                  <input type="file" id="post-video" accept="video/*" class="hidden">
+                </label>
+                <select id="post-privacy" class="select-field text-xs !py-2 !px-3">
+                  <option value="public">🌐 Công khai</option>
+                  <option value="friends">👥 Bạn bè</option>
+                  <option value="private">🔒 Chỉ mình tôi</option>
+                </select>
+              </div>
+              <button onclick="createPost()" class="btn-primary text-xs"><i class="fa-solid fa-paper-plane mr-1"></i>Đăng</button>
+            </div>
+          </div>
+          <div id="profile-feed"></div>
+        </div>
         <div id="photos-tab" class="hidden glass-panel p-4 rounded-3xl">
           <div id="photos-grid" class="photos-grid"></div>
         </div>
@@ -187,15 +229,20 @@
     toggleField('contact-website', u.website, u.website);
 
     const cover = document.getElementById('cover-img');
-    if (u.coverImage) { cover.src = EduAPI.fileUrl(u.coverImage); cover.classList.remove('hidden'); } else cover.classList.add('hidden');
+    if (u.coverImage) {
+      cover.src = EduAPI.fileUrl(u.coverImage);
+      cover.onerror = () => { cover.classList.add('hidden'); };
+      cover.classList.remove('hidden');
+    } else cover.classList.add('hidden');
     document.getElementById('avatar-box').innerHTML = u.avatar
-      ? `<img src="${EduAPI.fileUrl(u.avatar)}">`
+      ? `<img src="${EduAPI.fileUrl(u.avatar)}" onerror="this.onerror=null;this.src='assets/img/broken-image.svg'">`
       : `<div class="avatar-initial">${initials(u.fullName || u.username)}</div>`;
 
     if (isOwn) {
       document.getElementById('cover-edit-btn').classList.remove('hidden');
       document.getElementById('avatar-edit-btn').classList.remove('hidden');
       document.getElementById('edit-profile-btn').classList.remove('hidden');
+      document.getElementById('profile-composer').classList.remove('hidden');
       if (!u.verified) document.getElementById('verify-btn').classList.remove('hidden');
       if (u.verificationStatus === 'pending') {
         const vb = document.getElementById('verify-btn');
@@ -309,6 +356,78 @@
       </a>`).join('') || '<p class="text-xs text-slate-500 col-span-full">Chưa có bạn bè nào.</p>';
   }
 
+  /* ---------------- Composer (own profile only): multi-image + video ---------------- */
+  let composeFiles = [];
+  let composeVideoFile = null;
+
+  function initComposerListeners() {
+    document.getElementById('post-images').addEventListener('change', e => {
+      if (composeVideoFile) removeComposeVideo();
+      composeFiles = composeFiles.concat(Array.from(e.target.files)).slice(0, 10);
+      e.target.value = '';
+      renderComposeThumbs();
+    });
+    document.getElementById('post-video').addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      composeFiles = []; renderComposeThumbs();
+      composeVideoFile = file;
+      const el = document.getElementById('compose-video-el');
+      el.src = URL.createObjectURL(file);
+      document.getElementById('compose-video-preview').classList.remove('hidden');
+      e.target.value = '';
+    });
+  }
+  function removeComposeVideo() {
+    composeVideoFile = null;
+    document.getElementById('compose-video-preview').classList.add('hidden');
+    document.getElementById('compose-video-el').removeAttribute('src');
+  }
+  function renderComposeThumbs() {
+    const box = document.getElementById('compose-thumbs');
+    box.innerHTML = composeFiles.map((f, i) => `
+      <div class="compose-thumb" draggable="true" data-idx="${i}">
+        <img src="${URL.createObjectURL(f)}">
+        <div class="rm" onclick="removeComposeFile(${i})"><i class="fa-solid fa-xmark"></i></div>
+      </div>`).join('');
+    let dragSrc = null;
+    box.querySelectorAll('.compose-thumb').forEach(el => {
+      el.addEventListener('dragstart', () => { dragSrc = +el.dataset.idx; });
+      el.addEventListener('dragover', ev => { ev.preventDefault(); el.classList.add('drag-over'); });
+      el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+      el.addEventListener('drop', ev => {
+        ev.preventDefault(); el.classList.remove('drag-over');
+        const dst = +el.dataset.idx;
+        if (dragSrc === null || dragSrc === dst) return;
+        const moved = composeFiles.splice(dragSrc, 1)[0];
+        composeFiles.splice(dst, 0, moved);
+        renderComposeThumbs();
+      });
+    });
+  }
+  function removeComposeFile(i) { composeFiles.splice(i, 1); renderComposeThumbs(); }
+
+  async function createPost() {
+    const content = document.getElementById('post-content').value.trim();
+    if (!content && !composeFiles.length && !composeVideoFile) { EduAPI.toast('Hãy nhập nội dung hoặc thêm ảnh/video.', 'error'); return; }
+    const fd = new FormData();
+    fd.append('content', content);
+    fd.append('privacy', document.getElementById('post-privacy').value);
+    composeFiles.forEach(f => fd.append('images', f));
+    if (composeVideoFile) fd.append('video', composeVideoFile);
+    try {
+      await EduAPI.request('/api/posts', { method: 'POST', body: fd, isForm: true });
+      document.getElementById('post-content').value = '';
+      composeFiles = []; renderComposeThumbs();
+      removeComposeVideo();
+      loadPosts();
+      profileUser.postCount++;
+      document.getElementById('about-posts').querySelector('span').textContent = `${profileUser.postCount} bài viết`;
+      EduAPI.toast('Đã đăng bài!', 'success');
+    } catch (err) { EduAPI.toast(err.message, 'error'); }
+  }
+  initComposerListeners();
+
   function switchTab(tab) {
     ['posts', 'photos', 'friends'].forEach(t => {
       document.getElementById(`${t}-tab`).classList.toggle('hidden', t !== tab);
@@ -316,14 +435,23 @@
     });
   }
 
+  function gridClass(n) { return n === 1 ? 'g1' : n === 2 ? 'g2' : n === 3 ? 'g3' : 'g4'; }
+  function imagesGridHtml(urls) {
+    if (!urls.length) return '';
+    const shown = urls.slice(0, 4);
+    const extra = urls.length - 4;
+    return `<div class="img-grid ${gridClass(shown.length)} mb-2">${shown.map((u, i) => `
+      <div style="position:relative">
+        <img src="${u}" onerror="this.onerror=null;this.src='assets/img/broken-image.svg'">
+        ${i === 3 && extra > 0 ? `<div style="position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1.25rem">+${extra}</div>` : ''}
+      </div>`).join('')}</div>`;
+  }
+
   async function loadPosts() {
     const { posts } = await EduAPI.request(`/api/posts?authorId=${profileUser.id}`);
     const me = EduAPI.getUser();
     document.getElementById('profile-feed').innerHTML = posts.map(p => {
       const imgs = (p.images && p.images.length ? p.images : (p.image ? [p.image] : [])).map(EduAPI.fileUrl);
-      const shown = imgs.slice(0, 4);
-      const extra = imgs.length - 4;
-      const gridHtml = shown.length ? `<div style="display:grid;gap:3px;border-radius:1rem;overflow:hidden" class="mb-2 img-grid-${shown.length}">${shown.map((u, i) => `<div style="position:relative"><img src="${u}" style="width:100%;height:${shown.length===1?'420px':'220px'};object-fit:cover;display:block">${i===3&&extra>0?`<div style="position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800">+${extra}</div>`:''}</div>`).join('')}</div>` : '';
       return `
       <div class="glass-panel p-4 rounded-3xl mb-4">
         <div class="flex items-center justify-between mb-2">
@@ -331,7 +459,7 @@
           ${(p.author && p.author.id === me.id) || me.role === 'admin' ? `<button onclick="deletePost('${p.id}')" class="text-rose-400 text-xs"><i class="fa-solid fa-trash"></i></button>` : ''}
         </div>
         <p class="text-sm mb-2 whitespace-pre-wrap">${escapeHtml(p.content)}</p>
-        ${gridHtml}
+        ${imagesGridHtml(imgs)}
         ${p.video ? EduVideo.renderVideoBlock(EduAPI.fileUrl(p.video), { extraClass: 'max-h-[420px]' }) : ''}
         <div class="flex items-center gap-4 text-xs text-slate-400 border-t border-white/5 pt-2">
           <button onclick="likePost('${p.id}')" class="hover:text-pink-400"><i class="fa-solid fa-heart mr-1"></i>${p.likeCount} Thích</button>
@@ -342,7 +470,7 @@
     EduVideo.observeAll(document.getElementById('profile-feed'));
 
     const allImgs = posts.flatMap(p => (p.images && p.images.length ? p.images : (p.image ? [p.image] : []))).map(EduAPI.fileUrl);
-    document.getElementById('photos-grid').innerHTML = allImgs.map(u => `<img src="${u}">`).join('') || '<p class="text-slate-500 text-sm col-span-full">Chưa có ảnh nào.</p>';
+    document.getElementById('photos-grid').innerHTML = allImgs.map(u => `<img src="${u}" onerror="this.onerror=null;this.src='assets/img/broken-image.svg'">`).join('') || '<p class="text-slate-500 text-sm col-span-full">Chưa có ảnh nào.</p>';
   }
   async function likePost(id) { await EduAPI.request(`/api/posts/${id}/like`, { method: 'POST' }); loadPosts(); }
   async function deletePost(id) { if (!confirm('Xoá bài viết này?')) return; await EduAPI.request(`/api/posts/${id}`, { method: 'DELETE' }); loadPosts(); }
