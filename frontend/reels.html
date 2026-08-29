@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reels — Quantum Chat OS</title>
+<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#06040d">
+<link rel="icon" type="image/svg+xml" href="assets/img/quantum-chat-logo.svg">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<link rel="stylesheet" href="assets/css/tailwind.built.css?v=20260830">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="assets/css/shared.css?v=20260830">
+<style>
+  html, body { height: 100%; overflow: hidden; }
+  #reels-scroller { scroll-snap-type: y mandatory; overflow-y: scroll; height: 100vh; scrollbar-width: none; }
+  #reels-scroller::-webkit-scrollbar { display: none; }
+  .reel-slide { scroll-snap-align: start; height: 100vh; position: relative; display: flex; align-items: center; justify-content: center; background: #000; }
+  .reel-slide .qc-video-wrap, .reel-slide video.qc-video { width: 100%; height: 100%; }
+  .reel-slide video.qc-video { object-fit: contain; background: #000; }
+</style>
+</head>
+<body class="bg-black text-slate-100 font-sans">
+
+<div id="toast-notif-box" class="fixed top-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
+
+<div class="fixed top-4 left-4 z-[1300] flex items-center gap-3">
+  <a href="social.html" class="w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white"><i class="fa-solid fa-arrow-left"></i></a>
+  <span class="font-black text-white">Reels</span>
+</div>
+<button onclick="openModal('reel-upload-modal')" class="fixed top-4 right-4 z-[1300] w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white" title="Đăng Reel">
+  <i class="fa-solid fa-plus"></i>
+</button>
+
+<div id="reels-scroller"></div>
+
+<div id="empty-state" class="hidden fixed inset-0 flex flex-col items-center justify-center text-center px-6">
+  <i class="fa-solid fa-clapperboard text-5xl text-slate-600 mb-4"></i>
+  <p class="text-slate-400 text-sm mb-4">Chưa có Reel nào. Hãy là người đầu tiên đăng!</p>
+  <button onclick="openModal('reel-upload-modal')" class="btn-primary text-xs">Đăng Reel đầu tiên</button>
+</div>
+
+<!-- Upload modal -->
+<div id="reel-upload-modal" class="fixed inset-0 bg-black/80 z-[2000] hidden items-center justify-center p-4">
+  <div class="glass-panel rounded-3xl p-5 w-full max-w-sm">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="font-black text-sm"><i class="fa-solid fa-clapperboard text-fuchsia-400 mr-1"></i>Đăng Reel</h3>
+      <button onclick="closeModal('reel-upload-modal')" class="text-slate-400"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <video id="reel-preview-video" class="w-full h-64 object-contain bg-black rounded-2xl mb-3 hidden" controls muted></video>
+    <label class="file-field-btn cursor-pointer text-xs w-full flex items-center justify-center gap-2 mb-3">
+      <i class="fa-solid fa-upload"></i> Chọn video (dọc, tối đa 150MB)
+      <input type="file" id="reel-video-input" accept="video/*" class="hidden">
+    </label>
+    <input id="reel-caption-input" class="input-field text-xs mb-3" placeholder="Chú thích...">
+    <button onclick="submitReel()" class="btn-primary w-full text-xs">Đăng Reel</button>
+  </div>
+</div>
+
+<script src="assets/js/particles.js?v=20260830"></script>
+<script src="assets/js/config.js?v=20260830"></script>
+<script src="assets/js/api.js?v=20260830"></script>
+<script src="assets/js/layout.js?v=20260830"></script>
+<script src="assets/js/video-autoplay.js?v=20260830"></script>
+<script>
+  let reelVideoFile = null;
+
+  if (EduAPI.requireLogin()) { EduLayout.applyTheme(EduAPI.getUser()); loadReels(); }
+
+  function openModal(id) { const el = document.getElementById(id); el.classList.remove('hidden'); el.classList.add('flex'); }
+  function closeModal(id) { const el = document.getElementById(id); el.classList.add('hidden'); el.classList.remove('flex'); }
+  function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+  function avatarHtml(u, size) {
+    const initials = (u.fullName || u.username || '?').trim().split(/\s+/).slice(-2).map(x => x[0]).join('').toUpperCase();
+    return u.avatar ? `<img src="${EduAPI.fileUrl(u.avatar)}" class="w-${size} h-${size} rounded-full object-cover border-2 border-white/30" onerror="this.onerror=null;this.src=&quot;assets/img/broken-image.svg&quot;;this.classList.add(&quot;opacity-40&quot;)">` : `<div class="avatar-initial w-${size} h-${size} text-xs">${initials}</div>`;
+  }
+
+  async function loadReels() {
+    const { reels } = await EduAPI.request('/api/reels');
+    const me = EduAPI.getUser();
+    const scroller = document.getElementById('reels-scroller');
+    document.getElementById('empty-state').classList.toggle('hidden', reels.length > 0);
+    scroller.innerHTML = reels.map(r => `
+      <div class="reel-slide">
+        ${EduVideo.renderVideoBlock(EduAPI.fileUrl(r.video), { loop: true })}
+        <div class="absolute left-4 right-20 bottom-8 z-10 pointer-events-none">
+          <div class="flex items-center gap-2 mb-2">
+            ${avatarHtml(r.author || {}, 9)}
+            <span class="font-bold text-sm flex items-center">${r.author ? escapeHtml(r.author.fullName || r.author.username) : 'Ẩn danh'}${EduLayout.verifiedBadge(r.author)}</span>
+          </div>
+          <p class="text-sm text-white/90">${escapeHtml(r.caption)}</p>
+        </div>
+        <div class="absolute right-3 bottom-24 z-10 flex flex-col items-center gap-5">
+          <button onclick="likeReel('${r.id}')" class="flex flex-col items-center text-white">
+            <span class="w-11 h-11 rounded-full bg-black/40 flex items-center justify-center ${r.likes.includes(me.id) ? 'text-pink-400' : ''}"><i class="fa-solid fa-heart"></i></span>
+            <span class="text-[10px] mt-1">${r.likeCount}</span>
+          </button>
+          ${(r.author && r.author.id === me.id) || me.role === 'admin' ? `<button onclick="deleteReel('${r.id}')" class="flex flex-col items-center text-white"><span class="w-11 h-11 rounded-full bg-black/40 flex items-center justify-center text-rose-400"><i class="fa-solid fa-trash"></i></span></button>` : ''}
+        </div>
+      </div>`).join('');
+    EduVideo.observeAll(scroller);
+  }
+
+  async function likeReel(id) {
+    await EduAPI.request(`/api/reels/${id}/like`, { method: 'POST' });
+    loadReels();
+  }
+  async function deleteReel(id) {
+    if (!confirm('Xoá Reel này?')) return;
+    await EduAPI.request(`/api/reels/${id}`, { method: 'DELETE' });
+    loadReels();
+  }
+
+  document.getElementById('reel-video-input').addEventListener('change', e => {
+    reelVideoFile = e.target.files[0] || null;
+    const vid = document.getElementById('reel-preview-video');
+    if (reelVideoFile) { vid.src = URL.createObjectURL(reelVideoFile); vid.classList.remove('hidden'); }
+  });
+  async function submitReel() {
+    if (!reelVideoFile) { EduAPI.toast('Hãy chọn một video.', 'error'); return; }
+    const fd = new FormData();
+    fd.append('video', reelVideoFile);
+    fd.append('caption', document.getElementById('reel-caption-input').value.trim());
+    try {
+      await EduAPI.request('/api/reels', { method: 'POST', body: fd, isForm: true });
+      reelVideoFile = null;
+      document.getElementById('reel-video-input').value = '';
+      document.getElementById('reel-caption-input').value = '';
+      document.getElementById('reel-preview-video').classList.add('hidden');
+      closeModal('reel-upload-modal');
+      loadReels();
+      EduAPI.toast('Đã đăng Reel!', 'success');
+    } catch (err) { EduAPI.toast(err.message, 'error'); }
+  }
+</script>
+</body>
+</html>

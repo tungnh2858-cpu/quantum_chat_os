@@ -1,0 +1,105 @@
+/* ================== Theme variables (real dark/light mode) ================== */
+:root, html[data-theme="dark"] {
+  --edu-bg: #06040d;
+  --edu-panel: rgba(15, 10, 35, 0.85);
+  --edu-panel-border: rgba(255, 255, 255, 0.08);
+  --edu-text: #f1f5f9;
+  --edu-text-dim: #94a3b8;
+  --edu-field-bg: rgba(255,255,255,.05);
+  --edu-field-border: rgba(255,255,255,.1);
+}
+html[data-theme="light"] {
+  --edu-bg: #eef1fb;
+  --edu-panel: rgba(255, 255, 255, 0.85);
+  --edu-panel-border: rgba(15, 10, 35, 0.08);
+  --edu-text: #16132b;
+  --edu-text-dim: #5b5878;
+  --edu-field-bg: rgba(15,10,35,.04);
+  --edu-field-border: rgba(15,10,35,.12);
+}
+html[data-theme="light"] body { background: var(--edu-bg); color: var(--edu-text); }
+html[data-theme="light"] .text-slate-100, html[data-theme="light"] .text-slate-200, html[data-theme="light"] .text-slate-300 { color: var(--edu-text) !important; }
+html[data-theme="light"] .text-slate-400, html[data-theme="light"] .text-slate-500 { color: var(--edu-text-dim) !important; }
+html[data-theme="light"] .bg-white\/5, html[data-theme="light"] .bg-white\/10 { background: rgba(15,10,35,.05) !important; }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: rgba(13, 10, 30, 0.4); border-radius: 8px; }
+::-webkit-scrollbar-thumb { background: rgba(139, 92, 246, 0.5); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0, 240, 255, 0.8); }
+
+.glass-panel { background: var(--edu-panel); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border: 1px solid var(--edu-panel-border); color: var(--edu-text); }
+body { background: var(--edu-bg); color: var(--edu-text); transition: background .3s ease, color .3s ease; }
+
+.avatar-initial {
+  background-color: #211b43; color: #ffffff; font-weight: 800; font-family: 'Plus Jakarta Sans', sans-serif;
+  border-radius: 12px; display: flex; align-items: center; justify-content: center; text-transform: uppercase;
+}
+
+.glowing-bg-circle { position: absolute; border-radius: 50%; filter: blur(140px); z-index: 0; pointer-events: none; opacity: 0.2; transition: all 1s ease; }
+input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+.active-tab-style { background: rgba(255,255,255,0.1); color: white !important; border-left: 4px solid #00f0ff; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+
+.btn-primary { background: linear-gradient(90deg, #00f0ff, #6d28d9); color: white; font-weight: 800; border-radius: 0.75rem; padding: 0.65rem 1.25rem; transition: all .2s; }
+.btn-primary:hover { filter: brightness(1.1); box-shadow: 0 0 18px rgba(0,240,255,.35); }
+.btn-danger { background: rgba(244,63,94,.15); color: #fb7185; font-weight: 700; border-radius: 0.75rem; padding: 0.5rem 1rem; }
+.btn-danger:hover { background: rgba(244,63,94,.25); }
+.input-field { width: 100%; padding: 0.75rem 1rem; background: var(--edu-field-bg); border: 1px solid var(--edu-field-border); border-radius: .75rem; color: var(--edu-text); transition: border-color .2s, box-shadow .2s; }
+.input-field:focus { outline: none; border-color: #00f0ff; box-shadow: 0 0 0 3px rgba(0,240,255,.15); }
+
+/* ---- Cyberpunk <select> dropdown ---- */
+select.input-field, select.select-field {
+  width: 100%; padding: 0.7rem 2.5rem 0.7rem 1rem; background-color: var(--edu-field-bg);
+  border: 1px solid var(--edu-field-border); border-radius: .75rem; color: var(--edu-text);
+  appearance: none; -webkit-appearance: none; -moz-appearance: none; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, #00f0ff 50%), linear-gradient(135deg, #00f0ff 50%, transparent 50%);
+  background-position: calc(100% - 18px) center, calc(100% - 13px) center;
+  background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+  transition: border-color .2s, box-shadow .2s;
+}
+select.input-field:focus, select.select-field:focus { outline: none; border-color: #00f0ff; box-shadow: 0 0 0 3px rgba(0,240,255,.15); }
+select.input-field option, select.select-field option { background: #12102a; color: #e2e8f0; }
+
+/* ---- Cyberpunk file picker (hides ugly native "Choose File" button) ---- */
+.file-field-wrapper { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.file-field-wrapper input[type="file"] { display: none; }
+.file-field-btn {
+  display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.1rem;
+  background: linear-gradient(90deg, rgba(0,240,255,.15), rgba(139,92,246,.15));
+  border: 1px solid rgba(0,240,255,.4); border-radius: .75rem; color: #00f0ff;
+  font-weight: 700; font-size: .8rem; cursor: pointer; transition: all .2s;
+}
+.file-field-btn:hover { box-shadow: 0 0 14px rgba(0,240,255,.35); border-color: #00f0ff; }
+.file-field-name { font-size: .75rem; color: var(--edu-text-dim); }
+
+/* ---- Fullscreen animated particle-constellation background ---- */
+/* Page content already sits on "relative z-10" wrappers, so this just needs to stay behind at z-0. */
+#edu-particles-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .55; }
+
+/* ---- Custom animated cursor (ring + glowing dot) ---- */
+@media (pointer: fine) {
+  .edu-custom-cursor-active, .edu-custom-cursor-active * { cursor: none !important; }
+}
+#edu-cursor-ring {
+  position: fixed; top: 0; left: 0; width: 34px; height: 34px; border-radius: 50%;
+  border: 2px solid #a855f7; box-shadow: 0 0 12px rgba(168,85,247,.8), inset 0 0 8px rgba(168,85,247,.4);
+  pointer-events: none; z-index: 99999; transition: width .15s ease, height .15s ease, border-color .15s ease;
+}
+#edu-cursor-dot {
+  position: fixed; top: 0; left: 0; width: 10px; height: 10px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #5eead4, #00f0ff 55%, #ff69f5 100%);
+  box-shadow: 0 0 10px rgba(0,240,255,.9); pointer-events: none; z-index: 99999;
+}
+#edu-cursor-ring.edu-cursor-hover { width: 50px; height: 50px; border-color: #00f0ff; }
+#edu-cursor-ring.edu-cursor-clicked { width: 24px; height: 24px; border-color: #ff69f5; }
+
+/* ---- Password field with show/hide eye toggle ---- */
+.pw-wrapper { position: relative; }
+.pw-wrapper .input-field { padding-right: 2.75rem; }
+.pw-toggle {
+  position: absolute; right: 0.9rem; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: #94a3b8; cursor: pointer; padding: 4px;
+}
+.pw-toggle:hover { color: #00f0ff; }

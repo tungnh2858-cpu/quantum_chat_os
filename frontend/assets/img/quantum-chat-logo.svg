@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="qc-ring" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="35%" stop-color="#8b5cf6"/>
+      <stop offset="65%" stop-color="#ec4899"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="qc-tail" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#db2777"/>
+    </linearGradient>
+  </defs>
+  <path d="M96 84 L110 108 L86 92 Z" fill="url(#qc-tail)"/>
+  <circle cx="60" cy="58" r="46" fill="url(#qc-ring)"/>
+  <circle cx="60" cy="58" r="35" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="3"/>
+  <circle cx="60" cy="44" r="14" fill="#fff"/>
+  <path d="M60 60c-15 0-27 10-27 24v6h54v-6c0-14-12-24-27-24z" fill="#fff"/>
+  <circle cx="34" cy="46" r="8" fill="#fff" fill-opacity="0.85"/>
+  <circle cx="86" cy="52" r="8" fill="#fff" fill-opacity="0.85"/>
+  <path d="M75 40l2.4 5.2L83 47.5l-5.6 2.3L75 55l-2.4-5.2L67 47.5l5.6-2.3z" fill="#fff" fill-opacity="0.9"/>
+</svg>
