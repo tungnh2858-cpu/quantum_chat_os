@@ -14,4 +14,4 @@
  *
  * Ví dụ: window.QUANTUMCHAT_API_BASE = 'https://quantum-chat-os-backend.onrender.com';
  */
-window.QUANTUMCHAT_API_BASE = 'https://edupulse-backend-e8yq.onrender.com/social.html';
+window.QUANTUMCHAT_API_BASE = '';
