@@ -82,6 +82,11 @@ select.input-field option, select.select-field option { background: #12102a; col
 @media (pointer: fine) {
   .edu-custom-cursor-active, .edu-custom-cursor-active * { cursor: none !important; }
 }
+@media (pointer: coarse), (hover: none) {
+  /* Phones/tablets: never show the desktop-style custom cursor, and always show the real tap cursor. */
+  #edu-cursor-ring, #edu-cursor-dot { display: none !important; }
+  .edu-custom-cursor-active, .edu-custom-cursor-active * { cursor: auto !important; }
+}
 #edu-cursor-ring {
   position: fixed; top: 0; left: 0; width: 34px; height: 34px; border-radius: 50%;
   border: 2px solid #a855f7; box-shadow: 0 0 12px rgba(168,85,247,.8), inset 0 0 8px rgba(168,85,247,.4);

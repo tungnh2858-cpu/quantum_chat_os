@@ -4,7 +4,8 @@
  * devices (phones/tablets) so mobile users keep the normal tap behavior.
  */
 (function () {
-  if (!window.matchMedia('(pointer: fine)').matches) return; // skip on touch devices
+  const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+  if (!window.matchMedia('(pointer: fine)').matches || isTouchDevice) return; // skip on touch devices
 
   const ring = document.createElement('div');
   ring.id = 'edu-cursor-ring';
@@ -15,6 +16,13 @@
     document.body.appendChild(dot);
     document.body.classList.add('edu-custom-cursor-active');
   });
+
+  // Final safety net: some hybrid laptops/tablets misreport pointer capabilities.
+  // The moment a real touch happens, remove the custom cursor entirely.
+  window.addEventListener('touchstart', () => {
+    document.body.classList.remove('edu-custom-cursor-active');
+    ring.remove(); dot.remove();
+  }, { once: true, passive: true });
 
   let mouseX = window.innerWidth / 2, mouseY = window.innerHeight / 2;
   let ringX = mouseX, ringY = mouseY;

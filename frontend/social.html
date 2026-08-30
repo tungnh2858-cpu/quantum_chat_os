@@ -29,7 +29,9 @@
   .compose-thumb img{width:100%;height:100%;object-fit:cover}
   .compose-thumb .rm{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.6);color:#fff;width:20px;height:20px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-size:10px}
   .compose-thumb.drag-over{outline:2px dashed #00f0ff}
-  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:2000;display:flex;align-items:center;justify-content:center;padding:1rem}
+  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:2000;align-items:center;justify-content:center;padding:1rem}
+  .modal-backdrop.is-open{display:flex}
+  .modal-backdrop:not(.is-open){display:none}
 </style>
 </head>
 <body class="bg-brand-950 text-slate-100 font-sans min-h-screen relative overflow-x-hidden">
@@ -258,8 +260,8 @@
       </div>`).join('')}</div>`;
   }
 
-  function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
-  function closeModal(id) { document.getElementById(id).classList.add('hidden'); if (id === 'story-view-modal') clearInterval(storyTimer); }
+  function openModal(id) { const el = document.getElementById(id); el.classList.remove('hidden'); el.classList.add('is-open'); }
+  function closeModal(id) { const el = document.getElementById(id); el.classList.add('hidden'); el.classList.remove('is-open'); if (id === 'story-view-modal') clearInterval(storyTimer); }
 
   function openPreview() {
     const me = EduAPI.getUser();
