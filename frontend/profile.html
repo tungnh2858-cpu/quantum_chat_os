@@ -264,7 +264,7 @@
       fb.innerHTML = u.isFollowing ? '<i class="fa-solid fa-bell-slash mr-1"></i>Bỏ theo dõi' : '<i class="fa-solid fa-bell mr-1"></i>Theo dõi';
       const mb = document.getElementById('message-btn');
       mb.classList.remove('hidden');
-      mb.onclick = () => window.location.href = `social.html?chat=${u.id}`;
+      mb.onclick = () => window.location.href = `messages.html?with=${u.id}`;
     }
   }
   function toggleField(id, condition, text) {

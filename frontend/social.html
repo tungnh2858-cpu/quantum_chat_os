@@ -47,7 +47,7 @@
       </div>
       <div class="flex items-center gap-2">
         <a id="my-profile-link" href="profile.html" class="btn-primary text-xs"><i class="fa-solid fa-id-badge mr-1"></i>Trang cá nhân</a>
-        <button onclick="toggleChat()" class="btn-primary text-xs"><i class="fa-solid fa-message mr-1"></i>Trò Chuyện</button>
+        <a href="messages.html" class="btn-primary text-xs"><i class="fa-solid fa-message mr-1"></i>Trò Chuyện</a>
       </div>
     </header>
     <div id="mobile-drawer" class="hidden lg:hidden glass-panel rounded-3xl mb-4"><div id="mobile-nav-slot"></div></div>
@@ -155,19 +155,6 @@
   </div>
 </div>
 
-<!-- Chat panel -->
-<div id="chat-panel" class="fixed bottom-4 right-4 w-80 h-[420px] glass-panel rounded-3xl shadow-2xl flex-col hidden z-[1500]">
-  <div class="p-3 border-b border-white/10 flex items-center justify-between">
-    <span id="chat-title" class="font-black text-sm">Trò chuyện</span>
-    <button onclick="toggleChat()" class="text-slate-400"><i class="fa-solid fa-xmark"></i></button>
-  </div>
-  <div id="chat-messages" class="flex-1 overflow-y-auto p-3 space-y-2 text-xs"></div>
-  <div class="p-3 border-t border-white/10 flex gap-2">
-    <input id="chat-input" class="input-field text-xs" placeholder="Nhập tin nhắn...">
-    <button onclick="sendChat()" class="btn-primary text-xs px-3"><i class="fa-solid fa-paper-plane"></i></button>
-  </div>
-</div>
-
 <script src="assets/js/particles.js?v=20260830"></script>
 <script src="assets/js/config.js?v=20260830"></script>
 <script src="assets/js/cursor.js?v=20260830"></script>
@@ -175,7 +162,7 @@
 <script src="assets/js/layout.js?v=20260830"></script>
 <script src="assets/js/video-autoplay.js?v=20260830"></script>
 <script>
-  let people = [], activePartner = null, ws = null;
+  let people = [];
   let composeFiles = []; // File objects, order = layout order
   let storyFile = null;
   let storyGroups = [], storyGroupIdx = 0, storyIdx = 0, storyTimer = null;
@@ -183,11 +170,7 @@
   if (EduLayout.guard('social')) {
     const me = EduAPI.getUser();
     document.getElementById('my-profile-link').href = `profile.html?id=${me.id}`;
-    loadFeed(); loadFriends(); loadStories(); connectChat();
-    const chatWith = new URLSearchParams(location.search).get('chat');
-    if (chatWith) {
-      EduAPI.request(`/api/users/${chatWith}`).then(({ user }) => openChat({ id: user.id, username: user.username, fullName: user.fullName, avatar: user.avatar })).catch(() => {});
-    }
+    loadFeed(); loadFriends(); loadStories();
   }
 
   function avatarHtml(u, size = 9) {
@@ -437,7 +420,7 @@
       <div class="w-full flex items-center gap-2 p-2 rounded-xl hover:bg-white/5">
         <a href="profile.html?id=${u.id}">${avatarHtml(u, 8)}</a>
         <a href="profile.html?id=${u.id}" class="text-xs font-bold truncate flex-1 hover:underline flex items-center">${nameHtml(u)}</a>
-        <button onclick='openChat(${JSON.stringify(u)})' class="text-cyan-400 text-xs" title="Nhắn tin"><i class="fa-solid fa-message"></i></button>
+        <a href="messages.html?with=${u.id}" class="text-cyan-400 text-xs" title="Nhắn tin"><i class="fa-solid fa-message"></i></a>
       </div>`).join('') || '<p class="text-xs text-slate-500">Chưa có bạn bè nào — tìm bạn mới ở ô phía trên.</p>';
   }
 
@@ -474,43 +457,6 @@
       searchFriends(document.getElementById('friend-search-input').value);
     } catch (err) { EduAPI.toast(err.message, 'error'); }
   }
-
-  function toggleChat() {
-    const panel = document.getElementById('chat-panel');
-    panel.classList.toggle('hidden'); panel.classList.toggle('flex');
-  }
-  function connectChat() {
-    ws = EduAPI.openChatSocket(msg => {
-      if (msg.type === 'chat' && activePartner && (msg.message.fromId === activePartner.id || msg.message.toId === activePartner.id)) {
-        appendChatMsg(msg.message);
-      }
-    });
-  }
-  async function openChat(partner) {
-    activePartner = partner;
-    document.getElementById('chat-title').textContent = partner.fullName || partner.username;
-    const panel = document.getElementById('chat-panel');
-    panel.classList.remove('hidden'); panel.classList.add('flex');
-    const { messages } = await EduAPI.request(`/api/messages/${partner.id}`);
-    document.getElementById('chat-messages').innerHTML = '';
-    messages.forEach(appendChatMsg);
-  }
-  function appendChatMsg(m) {
-    const me = EduAPI.getUser();
-    const box = document.getElementById('chat-messages');
-    const mine = m.fromId === me.id;
-    box.innerHTML += `<div class="flex ${mine ? 'justify-end' : 'justify-start'}"><span class="px-3 py-2 rounded-2xl ${mine ? 'bg-cyan-500/20 text-cyan-100' : 'bg-white/10 text-slate-200'} max-w-[75%] break-words">${escapeHtml(m.content)}</span></div>`;
-    box.scrollTop = box.scrollHeight;
-  }
-  function sendChat() {
-    const input = document.getElementById('chat-input');
-    const content = input.value.trim();
-    if (!content || !activePartner) return;
-    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'chat', toId: activePartner.id, content }));
-    else EduAPI.request('/api/messages', { method: 'POST', body: { toId: activePartner.id, content } }).then(r => appendChatMsg(r.message));
-    input.value = '';
-  }
-  document.addEventListener('keydown', e => { if (e.target.id === 'chat-input' && e.key === 'Enter') sendChat(); });
 </script>
 </body>
 </html>

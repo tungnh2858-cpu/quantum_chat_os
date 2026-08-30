@@ -97,6 +97,10 @@ function migrate(db) {
     if (!Array.isArray(p.images)) p.images = p.image ? [p.image] : [];
     if (p.video === undefined) p.video = '';
   });
+  db.messages.forEach(m => {
+    if (m.image === undefined) m.image = '';
+    if (m.deleted === undefined) m.deleted = false;
+  });
   return db;
 }
 

@@ -8,6 +8,7 @@ const { WebSocketServer } = require('ws');
 
 const { getDB, saveDB, uuid } = require('./db');
 const { JWT_SECRET } = require('./middleware/auth');
+const realtime = require('./realtime');
 
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
@@ -58,7 +59,13 @@ app.get('*', (req, res, next) => {
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: '/ws' });
 
-const clients = new Map(); // userId -> Set of sockets
+function broadcastPresence(userId, online) {
+  const db = getDB();
+  const user = db.users.find(u => u.id === userId);
+  if (!user) return;
+  const payload = { type: 'presence', userId, online };
+  (user.friends || []).forEach(friendId => realtime.sendToUser(friendId, payload));
+}
 
 wss.on('connection', (ws, req) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
@@ -72,32 +79,34 @@ wss.on('connection', (ws, req) => {
     return;
   }
 
-  if (!clients.has(userId)) clients.set(userId, new Set());
-  clients.get(userId).add(ws);
+  const wasOffline = !realtime.isOnline(userId);
+  realtime.register(userId, ws);
+  if (wasOffline) broadcastPresence(userId, true);
 
   ws.on('message', raw => {
     let data;
     try { data = JSON.parse(raw); } catch { return; }
+
     if (data.type === 'chat') {
       const { toId, content } = data;
       if (!toId || !content) return;
       const db = getDB();
-      const msg = { id: uuid(), fromId: userId, toId, content, read: false, createdAt: new Date().toISOString() };
+      const msg = { id: uuid(), fromId: userId, toId, content, image: '', deleted: false, read: false, createdAt: new Date().toISOString() };
       db.messages.push(msg);
       saveDB(db);
-      const payload = JSON.stringify({ type: 'chat', message: msg });
-      (clients.get(toId) || []).forEach(sock => sock.readyState === 1 && sock.send(payload));
-      (clients.get(userId) || []).forEach(sock => sock.readyState === 1 && sock.send(payload));
+      const payload = { type: 'chat', message: msg };
+      realtime.sendToUser(toId, payload);
+      realtime.sendToUser(userId, payload);
     }
+
     if (data.type === 'typing') {
-      const payload = JSON.stringify({ type: 'typing', fromId: userId });
-      (clients.get(data.toId) || []).forEach(sock => sock.readyState === 1 && sock.send(payload));
+      realtime.sendToUser(data.toId, { type: 'typing', fromId: userId });
     }
   });
 
   ws.on('close', () => {
-    const set = clients.get(userId);
-    if (set) { set.delete(ws); if (set.size === 0) clients.delete(userId); }
+    realtime.unregister(userId, ws);
+    if (!realtime.isOnline(userId)) broadcastPresence(userId, false);
   });
 });
 

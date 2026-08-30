@@ -66,6 +66,7 @@
       <div class="flex items-center gap-3 p-3 rounded-2xl bg-white/5">
         <a href="profile.html?id=${u.id}">${avatarHtml(u)}</a>
         <a href="profile.html?id=${u.id}" class="text-sm font-bold flex-1 hover:underline flex items-center">${nameHtml(u)}</a>
+        <a href="messages.html?with=${u.id}" class="text-[10px] px-2 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-300" title="Nhắn tin"><i class="fa-solid fa-message"></i></a>
         <button onclick="unfriend('${u.id}')" class="text-[10px] px-2 py-1.5 rounded-lg bg-white/5 hover:bg-rose-500/20 hover:text-rose-300 text-slate-400">Huỷ kết bạn</button>
       </div>`).join('') || '<p class="text-xs text-slate-500 col-span-full">Bạn chưa có người bạn nào. Hãy tìm kiếm để kết bạn!</p>';
   }

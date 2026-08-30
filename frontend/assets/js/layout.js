@@ -7,6 +7,7 @@ const EduLayout = (() => {
     { id: 'social', href: 'social.html', icon: 'fa-house', label: 'Bảng Tin', color: 'text-pink-400' },
     { id: 'reels', href: 'reels.html', icon: 'fa-clapperboard', label: 'Reels', color: 'text-fuchsia-400' },
     { id: 'friends', href: 'friends.html', icon: 'fa-user-group', label: 'Bạn Bè', color: 'text-cyan-400' },
+    { id: 'messages', href: 'messages.html', icon: 'fa-comment-dots', label: 'Tin Nhắn', color: 'text-sky-400' },
     { id: 'accounts', href: 'admin.html', icon: 'fa-users-gear', label: 'Quản Lý Người Dùng', color: 'text-rose-500', adminOnly: true },
     { id: 'settings', href: 'settings.html', icon: 'fa-gear', label: 'Cài Đặt Tài Khoản', color: 'text-slate-400' }
   ];
@@ -15,7 +16,7 @@ const EduLayout = (() => {
   const BOTTOM_NAV = [
     { id: 'social', href: 'social.html', icon: 'fa-house' },
     { id: 'reels', href: 'reels.html', icon: 'fa-clapperboard' },
-    { id: 'friends', href: 'friends.html', icon: 'fa-user-group' },
+    { id: 'messages', href: 'messages.html', icon: 'fa-comment-dots' },
     { id: 'notifications', icon: 'fa-bell', action: 'toggleNotifPanel' },
     { id: 'more', icon: 'fa-bars', action: 'toggleMoreSheet' }
   ];
@@ -69,6 +70,10 @@ const EduLayout = (() => {
               </div>
             </div>
             <div class="flex items-center gap-1.5">
+              <a href="messages.html" id="msg-bell-btn" class="relative w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-sky-300" title="Tin nhắn">
+                <i class="fa-solid fa-comment-dots"></i>
+                <span id="msg-badge" class="hidden absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center">0</span>
+              </a>
               <button onclick="EduLayout.toggleNotifPanel()" id="notif-bell-btn" class="relative w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-cyan-300" title="Thông báo">
                 <i class="fa-solid fa-bell"></i>
                 <span id="notif-badge" class="hidden absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center">0</span>
@@ -100,8 +105,9 @@ const EduLayout = (() => {
     injectMoreSheet(user);
     injectNotifPanel();
     refreshNotifications();
+    refreshMessageBadge();
     if (notifPollTimer) clearInterval(notifPollTimer);
-    notifPollTimer = setInterval(refreshNotifications, 30000);
+    notifPollTimer = setInterval(() => { refreshNotifications(); refreshMessageBadge(); }, 30000);
   }
 
   function injectBottomNav(activeId, user) {
@@ -113,6 +119,7 @@ const EduLayout = (() => {
           class="flex-1 flex flex-col items-center justify-center py-2.5 relative ${activeId === n.id ? 'text-cyan-400' : 'text-slate-400'}">
           <i class="fa-solid ${n.icon} text-xl"></i>
           ${n.id === 'notifications' ? '<span id="bottom-notif-badge" class="hidden absolute top-1 right-[28%] min-w-[15px] h-[15px] px-0.5 rounded-full bg-rose-500 text-white text-[8px] font-black flex items-center justify-center">0</span>' : ''}
+          ${n.id === 'messages' ? '<span id="bottom-msg-badge" class="hidden absolute top-1 right-[28%] min-w-[15px] h-[15px] px-0.5 rounded-full bg-rose-500 text-white text-[8px] font-black flex items-center justify-center">0</span>' : ''}
           ${activeId === n.id ? '<span class="absolute bottom-0 w-8 h-0.5 bg-cyan-400 rounded-full"></span>' : ''}
         </${n.href ? 'a' : 'button'}>`).join('')}
     </nav>
@@ -132,6 +139,7 @@ const EduLayout = (() => {
     const entries = [
       { icon: 'fa-id-badge', bg: 'from-indigo-500 to-purple-500', label: 'Trang cá nhân', href: `profile.html?id=${user.id}` },
       { icon: 'fa-user-group', bg: 'from-cyan-500 to-blue-500', label: 'Bạn bè', href: 'friends.html' },
+      { icon: 'fa-comment-dots', bg: 'from-sky-500 to-cyan-500', label: 'Tin nhắn', href: 'messages.html' },
       { icon: 'fa-clapperboard', bg: 'from-fuchsia-500 to-pink-500', label: 'Reels', href: 'reels.html' },
       { icon: 'fa-bell', bg: 'from-amber-500 to-orange-500', label: 'Thông báo', action: 'toggleNotifPanel' },
       user.role === 'admin' ? { icon: 'fa-users-gear', bg: 'from-rose-500 to-red-500', label: 'Quản lý người dùng', href: 'admin.html' } : null,
@@ -193,6 +201,18 @@ const EduLayout = (() => {
     if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`;
     if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`;
     return `${Math.floor(diff / 86400)} ngày trước`;
+  }
+
+  async function refreshMessageBadge() {
+    try {
+      const { conversations } = await EduAPI.request('/api/messages');
+      const total = conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+      [document.getElementById('msg-badge'), document.getElementById('bottom-msg-badge')].forEach(b => {
+        if (!b) return;
+        b.textContent = total > 9 ? '9+' : total;
+        b.classList.toggle('hidden', total === 0);
+      });
+    } catch { /* silent */ }
   }
 
   async function refreshNotifications(renderList) {
@@ -260,7 +280,7 @@ const EduLayout = (() => {
 
   return {
     render, guard, logout, toggleTheme, applyTheme, NAV,
-    toggleMoreSheet, toggleNotifPanel, refreshNotifications, markNotifRead, markAllNotifsRead,
+    toggleMoreSheet, toggleNotifPanel, refreshNotifications, markNotifRead, markAllNotifsRead, refreshMessageBadge,
     initials, avatarHtml, verifiedBadge, timeAgo
   };
 })();
