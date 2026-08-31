@@ -86,9 +86,10 @@ router.get('/:id', requireAuth, (req, res) => {
 
 // POST /api/users  (admin creates an account manually)
 router.post('/', requireAuth, requireAdmin, (req, res) => {
-  const { username, password, role, fullName, email, phone, requireLoginOtp, emailOnLogin } = req.body || {};
+  const { username, password, role, fullName, email, phone, requireLoginOtp, emailOnLogin, verified } = req.body || {};
   if (!username || !password) return res.status(400).json({ error: 'Thiếu thông tin bắt buộc.' });
   const finalRole = role === 'admin' ? 'admin' : 'user';
+  const finalVerified = finalRole === 'admin' ? true : !!verified; // admins are always verified
 
   const db = getDB();
   if (db.users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
@@ -109,7 +110,7 @@ router.post('/', requireAuth, requireAdmin, (req, res) => {
     coverImage: '',
     bio: '',
     birthday: '', location: '', education: '', website: '',
-    verified: false, verificationStatus: 'none',
+    verified: finalVerified, verificationStatus: finalVerified ? 'approved' : 'none',
     friends: [], following: [],
     theme: 'dark',
     notifications: { email: true, push: true, chat: true },

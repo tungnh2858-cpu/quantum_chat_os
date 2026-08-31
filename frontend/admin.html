@@ -114,17 +114,52 @@
       <input id="c-fullname" class="input-field" placeholder="Họ và tên">
       <input id="c-email" type="email" class="input-field" placeholder="Email">
       <input id="c-phone" type="tel" class="input-field" placeholder="Số điện thoại">
-      <select id="c-role" class="input-field">
+      <select id="c-role" class="input-field" onchange="onCreateRoleChange(this.value)">
         <option value="user">Người Dùng</option>
         <option value="admin">Quản Trị Viên (Admin)</option>
       </select>
-      <label class="flex items-center gap-2 text-xs"><input type="checkbox" id="c-otp"> Yêu cầu mã OTP qua email mỗi lần đăng nhập</label>
-      <label class="flex items-center gap-2 text-xs"><input type="checkbox" id="c-email-login"> Gửi email thông báo mỗi lần đăng nhập</label>
+      <div class="space-y-2 pt-1">
+        <label class="flex items-center justify-between p-3 rounded-xl bg-white/5">
+          <span class="text-xs flex items-center gap-1.5"><i class="fa-solid fa-circle-check text-sky-400"></i> Cấp tích xanh ngay khi tạo</span>
+          <span class="qc-toggle"><input type="checkbox" id="c-verified"><span class="qc-toggle-track"></span></span>
+        </label>
+        <label class="flex items-center justify-between p-3 rounded-xl bg-white/5">
+          <span class="text-xs">Yêu cầu mã OTP qua email mỗi lần đăng nhập</span>
+          <span class="qc-toggle"><input type="checkbox" id="c-otp"><span class="qc-toggle-track"></span></span>
+        </label>
+        <label class="flex items-center justify-between p-3 rounded-xl bg-white/5">
+          <span class="text-xs">Gửi email thông báo mỗi lần đăng nhập</span>
+          <span class="qc-toggle"><input type="checkbox" id="c-email-login"><span class="qc-toggle-track"></span></span>
+        </label>
+      </div>
       <div class="flex gap-2 pt-2">
         <button type="button" onclick="closeCreateModal()" class="flex-1 py-2.5 rounded-xl bg-white/5 font-bold text-sm">Huỷ</button>
         <button type="submit" class="flex-1 py-2.5 btn-primary text-sm">Tạo Tài Khoản</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- Reset password modal -->
+<div id="reset-password-modal" class="fixed inset-0 z-[2000] bg-black/60 hidden items-center justify-center p-4">
+  <div class="glass-panel p-6 rounded-3xl w-full max-w-sm">
+    <h3 class="font-black text-lg mb-1"><i class="fa-solid fa-key text-cyan-400 mr-2"></i>Đặt Lại Mật Khẩu</h3>
+    <p class="text-xs text-slate-400 mb-4">Tài khoản: <span id="rp-username" class="font-mono text-cyan-300"></span></p>
+    <div class="rounded-2xl bg-amber-500/10 border border-amber-500/20 p-3 mb-4 flex gap-2">
+      <i class="fa-solid fa-circle-info text-amber-400 mt-0.5"></i>
+      <p class="text-[11px] text-amber-200 leading-snug">Mật khẩu được mã hoá một chiều nên không thể xem lại mật khẩu cũ — bạn chỉ có thể đặt một mật khẩu <b>mới</b> cho người dùng này.</p>
+    </div>
+    <label class="text-xs font-bold text-slate-400">Mật khẩu mới</label>
+    <div class="relative mt-1 mb-4">
+      <input id="rp-password" type="password" class="input-field pr-11" placeholder="Tối thiểu 6 ký tự">
+      <button type="button" onclick="toggleResetPasswordVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 inline-flex items-center justify-center" style="min-width:20px;min-height:20px">
+        <i id="rp-eye" class="fa-solid fa-eye"></i>
+      </button>
+    </div>
+    <div class="flex gap-2">
+      <button type="button" onclick="closeModal('reset-password-modal')" class="flex-1 py-2.5 rounded-xl bg-white/5 font-bold text-sm">Huỷ</button>
+      <button type="button" onclick="submitResetPassword()" class="flex-1 py-2.5 btn-primary text-sm">Lưu Mật Khẩu Mới</button>
+    </div>
   </div>
 </div>
 
@@ -172,9 +207,9 @@
           </td>
           <td class="py-3 px-6 text-right space-x-3">
             ${u.id !== 'ADMIN1' ? `
-              <button onclick="toggleStatus('${u.id}','${u.status}')" class="text-amber-400 hover:text-amber-300" title="Khoá/Mở khoá"><i class="fa-solid fa-lock"></i></button>
-              <button onclick="resetPassword('${u.id}')" class="text-cyan-400 hover:text-cyan-300" title="Đặt lại mật khẩu"><i class="fa-solid fa-key"></i></button>
-              <button onclick="deleteAccount('${u.id}')" class="text-rose-400 hover:text-rose-300" title="Xoá"><i class="fa-solid fa-trash"></i></button>
+              <button onclick="toggleStatus('${u.id}','${u.status}')" class="text-amber-400 hover:text-amber-300 inline-flex items-center justify-center" style="min-width:28px;min-height:28px" title="Khoá/Mở khoá"><i class="fa-solid fa-lock"></i></button>
+              <button onclick="resetPassword('${u.id}', '${u.username}')" class="text-cyan-400 hover:text-cyan-300 inline-flex items-center justify-center" style="min-width:28px;min-height:28px" title="Đặt lại mật khẩu"><i class="fa-solid fa-key"></i></button>
+              <button onclick="deleteAccount('${u.id}')" class="text-rose-400 hover:text-rose-300 inline-flex items-center justify-center" style="min-width:28px;min-height:28px" title="Xoá"><i class="fa-solid fa-trash"></i></button>
             ` : '<i class="fa-solid fa-shield-halved text-slate-500" title="Tài khoản Admin gốc"></i>'}
           </td>
         </tr>`).join('');
@@ -190,20 +225,52 @@
     try { await EduAPI.request(`/api/users/${id}/status`, { method: 'PUT', body: { status: next } }); EduAPI.toast('Đã cập nhật trạng thái tài khoản.', 'success'); loadAccounts(); }
     catch (err) { EduAPI.toast(err.message, 'error'); }
   }
-  async function resetPassword(id) {
-    const pw = prompt('Nhập mật khẩu mới cho tài khoản này (>=6 ký tự):');
-    if (!pw) return;
-    try { await EduAPI.request(`/api/users/${id}/reset-password`, { method: 'PUT', body: { newPassword: pw } }); EduAPI.toast('Đã đặt lại mật khẩu.', 'success'); }
-    catch (err) { EduAPI.toast(err.message, 'error'); }
+  let resetPasswordUserId = null;
+  function resetPassword(id, username) {
+    resetPasswordUserId = id;
+    document.getElementById('rp-username').textContent = username ? `@${username}` : '';
+    document.getElementById('rp-password').value = '';
+    document.getElementById('rp-password').type = 'password';
+    document.getElementById('rp-eye').className = 'fa-solid fa-eye';
+    openModal('reset-password-modal');
   }
+  function toggleResetPasswordVisibility() {
+    const input = document.getElementById('rp-password');
+    const eye = document.getElementById('rp-eye');
+    const showing = input.type === 'text';
+    input.type = showing ? 'password' : 'text';
+    eye.className = showing ? 'fa-solid fa-eye' : 'fa-solid fa-eye-slash';
+  }
+  async function submitResetPassword() {
+    const pw = document.getElementById('rp-password').value;
+    if (!pw || pw.length < 6) { EduAPI.toast('Mật khẩu tối thiểu 6 ký tự.', 'error'); return; }
+    try {
+      await EduAPI.request(`/api/users/${resetPasswordUserId}/reset-password`, { method: 'PUT', body: { newPassword: pw } });
+      EduAPI.toast('Đã đặt lại mật khẩu.', 'success');
+      closeModal('reset-password-modal');
+    } catch (err) { EduAPI.toast(err.message, 'error'); }
+  }
+  function openModal(id) { const el = document.getElementById(id); el.classList.remove('hidden'); el.classList.add('flex'); }
+  function closeModal(id) { const el = document.getElementById(id); el.classList.add('hidden'); el.classList.remove('flex'); }
   async function deleteAccount(id) {
     if (!confirm('Xoá tài khoản này vĩnh viễn?')) return;
     try { await EduAPI.request(`/api/users/${id}`, { method: 'DELETE' }); EduAPI.toast('Đã xoá tài khoản.', 'success'); loadAccounts(); }
     catch (err) { EduAPI.toast(err.message, 'error'); }
   }
 
-  function openCreateModal() { document.getElementById('create-modal').classList.remove('hidden'); document.getElementById('create-modal').classList.add('flex'); }
+  function openCreateModal() {
+    document.getElementById('create-modal').classList.remove('hidden'); document.getElementById('create-modal').classList.add('flex');
+    document.getElementById('c-role').value = 'user';
+    onCreateRoleChange('user');
+    document.getElementById('c-verified').checked = false;
+  }
   function closeCreateModal() { document.getElementById('create-modal').classList.add('hidden'); document.getElementById('create-modal').classList.remove('flex'); }
+
+  function onCreateRoleChange(role) {
+    const verifiedBox = document.getElementById('c-verified');
+    if (role === 'admin') { verifiedBox.checked = true; verifiedBox.disabled = true; }
+    else { verifiedBox.disabled = false; }
+  }
 
   document.getElementById('create-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -215,6 +282,7 @@
         email: document.getElementById('c-email').value.trim(),
         phone: document.getElementById('c-phone').value.trim(),
         role: document.getElementById('c-role').value,
+        verified: document.getElementById('c-verified').checked,
         requireLoginOtp: document.getElementById('c-otp').checked,
         emailOnLogin: document.getElementById('c-email-login').checked
       }});
