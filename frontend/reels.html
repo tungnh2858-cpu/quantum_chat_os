@@ -71,7 +71,7 @@
   function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
   function avatarHtml(u, size) {
     const initials = (u.fullName || u.username || '?').trim().split(/\s+/).slice(-2).map(x => x[0]).join('').toUpperCase();
-    return u.avatar ? `<img src="${EduAPI.fileUrl(u.avatar)}" class="w-${size} h-${size} rounded-full object-cover border-2 border-white/30" onerror="this.onerror=null;this.src=&quot;assets/img/broken-image.svg&quot;;this.classList.add(&quot;opacity-40&quot;)">` : `<div class="avatar-initial w-${size} h-${size} text-xs">${initials}</div>`;
+    return u.avatar ? `<img src="${EduAPI.fileUrl(u.avatar)}" class="w-${size} h-${size} rounded-full object-cover border-2 border-white/30" onerror="this.onerror=null;this.src=&quot;assets/img/broken-image.svg&quot;;this.classList.add(&quot;opacity-40&quot;)">` : `<img src="assets/img/default-avatar.svg" class="w-${size} h-${size} rounded-full object-cover">`;
   }
 
   async function loadReels() {

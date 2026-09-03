@@ -73,6 +73,7 @@
           <input type="file" id="chat-image-input" accept="image/*" class="hidden">
         </label>
         <input id="chat-input" class="input-field text-sm" placeholder="Nhập tin nhắn...">
+        <button type="button" id="chat-emoji-btn" class="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-amber-300 flex-shrink-0" title="Chèn emoji"><i class="fa-solid fa-face-smile"></i></button>
         <button onclick="sendMessage()" class="w-10 h-10 rounded-full btn-primary flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-paper-plane"></i></button>
       </div>
     </div>
@@ -89,6 +90,7 @@
 <script src="assets/js/cursor.js?v=20260830"></script>
 <script src="assets/js/api.js?v=20260830"></script>
 <script src="assets/js/layout.js?v=20260830"></script>
+<script src="assets/js/emoji-picker.js?v=20260830"></script>
 <script>
   let conversations = [];
   let activePartnerId = null;
@@ -100,6 +102,7 @@
   if (EduLayout.guard('messages')) {
     loadConversations();
     connectSocket();
+    EduEmoji.attach(document.getElementById('chat-emoji-btn'), document.getElementById('chat-input'));
     const withId = new URLSearchParams(location.search).get('with');
     if (withId) {
       openThread(withId);
@@ -115,7 +118,7 @@
   function avatarHtml(u, size) {
     return u.avatar
       ? `<img src="${EduAPI.fileUrl(u.avatar)}" class="w-${size} h-${size} rounded-full object-cover" onerror="this.onerror=null;this.src='assets/img/broken-image.svg'">`
-      : `<div class="avatar-initial w-${size} h-${size} text-xs">${initials(u.fullName || u.username)}</div>`;
+      : `<img src="assets/img/default-avatar.svg" class="w-${size} h-${size} rounded-full object-cover">`;
   }
   function timeShort(iso) {
     const d = new Date(iso);

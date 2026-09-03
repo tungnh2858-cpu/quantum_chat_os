@@ -55,7 +55,7 @@
 
   function avatarHtml(u, size = 11) {
     const initials = (u.fullName || u.username || '?').trim().split(/\s+/).slice(-2).map(s => s[0]).join('').toUpperCase();
-    return u.avatar ? `<img src="${EduAPI.fileUrl(u.avatar)}" class="w-${size} h-${size} rounded-full object-cover" onerror="this.onerror=null;this.src=&quot;assets/img/broken-image.svg&quot;;this.classList.add(&quot;opacity-40&quot;)">` : `<div class="avatar-initial w-${size} h-${size} text-sm">${initials}</div>`;
+    return u.avatar ? `<img src="${EduAPI.fileUrl(u.avatar)}" class="w-${size} h-${size} rounded-full object-cover" onerror="this.onerror=null;this.src=&quot;assets/img/broken-image.svg&quot;;this.classList.add(&quot;opacity-40&quot;)">` : `<img src="assets/img/default-avatar.svg" class="w-${size} h-${size} rounded-full object-cover">`;
   }
   function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
   function nameHtml(u) { return `${escapeHtml(u.fullName || u.username)}${EduLayout.verifiedBadge(u)}`; }

@@ -14,6 +14,16 @@ function sanitize(user) {
   return rest;
 }
 
+function realFollowerCount(db, userId) {
+  return db.users.filter(u => (u.following || []).includes(userId)).length;
+}
+function displayFriendCount(user) {
+  return user.friendCountOverride !== null && user.friendCountOverride !== undefined ? user.friendCountOverride : (user.friends || []).length;
+}
+function displayFollowerCount(db, user) {
+  return user.followerCountOverride !== null && user.followerCountOverride !== undefined ? user.followerCountOverride : realFollowerCount(db, user.id);
+}
+
 // GET /api/users  (admin: full list, for the moderation dashboard)
 router.get('/', requireAuth, requireAdmin, (req, res) => {
   const db = getDB();
@@ -74,8 +84,11 @@ router.get('/:id', requireAuth, (req, res) => {
       id: user.id, username: user.username, fullName: user.fullName,
       avatar: user.avatar, coverImage: user.coverImage || '', bio: user.bio || '',
       birthday: user.birthday || '', location: user.location || '', education: user.education || '', website: user.website || '',
-      role: user.role, verified: !!user.verified, verificationStatus: user.verificationStatus,
-      friendCount: (user.friends || []).length,
+      role: user.role, verified: !!user.verified, verificationStatus: user.verificationStatus, verificationBlocked: !!user.verificationBlocked,
+      friendCount: displayFriendCount(user),
+      followerCount: displayFollowerCount(db, user),
+      friendCountOverridden: user.friendCountOverride !== null && user.friendCountOverride !== undefined,
+      followerCountOverridden: user.followerCountOverride !== null && user.followerCountOverride !== undefined,
       isFriend: me.friends.includes(user.id),
       isFollowing: me.following.includes(user.id),
       isSelf: me.id === user.id,
@@ -84,12 +97,12 @@ router.get('/:id', requireAuth, (req, res) => {
   });
 });
 
-// POST /api/users  (admin creates an account manually)
-router.post('/', requireAuth, requireAdmin, (req, res) => {
+// POST /api/users  (admin creates an account manually; multipart so an avatar can be set right away)
+router.post('/', requireAuth, requireAdmin, uploadAvatar.single('avatar'), (req, res) => {
   const { username, password, role, fullName, email, phone, requireLoginOtp, emailOnLogin, verified } = req.body || {};
   if (!username || !password) return res.status(400).json({ error: 'Thiếu thông tin bắt buộc.' });
   const finalRole = role === 'admin' ? 'admin' : 'user';
-  const finalVerified = finalRole === 'admin' ? true : !!verified; // admins are always verified
+  const finalVerified = finalRole === 'admin' || verified === 'true' || verified === true;
 
   const db = getDB();
   if (db.users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
@@ -106,15 +119,16 @@ router.post('/', requireAuth, requireAdmin, (req, res) => {
     fullName: fullName || username,
     email: email || '',
     phone: phone || '',
-    avatar: '',
+    avatar: req.file ? `/uploads/avatars/${req.file.filename}` : '',
     coverImage: '',
     bio: '',
     birthday: '', location: '', education: '', website: '',
-    verified: finalVerified, verificationStatus: finalVerified ? 'approved' : 'none',
+    verified: finalVerified, verificationStatus: finalVerified ? 'approved' : 'none', verificationBlocked: false,
+    friendCountOverride: null, followerCountOverride: null,
     friends: [], following: [],
     theme: 'dark',
     notifications: { email: true, push: true, chat: true },
-    security: { requireLoginOtp: !!requireLoginOtp, emailOnLogin: !!emailOnLogin, allowedTools: null },
+    security: { requireLoginOtp: requireLoginOtp === 'true' || requireLoginOtp === true, emailOnLogin: emailOnLogin === 'true' || emailOnLogin === true, allowedTools: null },
     status: 'active',
     lastBirthdayNotifiedYear: null,
     createdAt: new Date().toISOString()
@@ -132,7 +146,58 @@ router.put('/:id/role', requireAuth, requireAdmin, (req, res) => {
   const user = db.users.find(u => u.id === req.params.id);
   if (!user) return res.status(404).json({ error: 'Không tìm thấy tài khoản.' });
   user.role = role;
-  if (role === 'admin') user.verified = true; // admins are always verified
+  if (role === 'admin') { user.verified = true; user.verificationStatus = 'approved'; } // admins are always verified
+  saveDB(db);
+  res.json({ user: sanitize(user) });
+});
+
+// PUT /api/users/:id/verified  (admin grants OR revokes the blue check directly)
+router.put('/:id/verified', requireAuth, requireAdmin, (req, res) => {
+  const { verified } = req.body || {};
+  const db = getDB();
+  const user = db.users.find(u => u.id === req.params.id);
+  if (!user) return res.status(404).json({ error: 'Không tìm thấy tài khoản.' });
+  if (user.role === 'admin' && !verified) return res.status(400).json({ error: 'Không thể gỡ tích xanh của tài khoản Admin.' });
+  user.verified = !!verified;
+  user.verificationStatus = verified ? 'approved' : 'revoked';
+  if (verified) pushNotification(db, { userId: user.id, type: 'verification_approved' });
+  saveDB(db);
+  res.json({ user: sanitize(user) });
+});
+
+// PUT /api/users/:id/verification-lock  (admin blocks/unblocks this account from ever requesting the blue check)
+router.put('/:id/verification-lock', requireAuth, requireAdmin, (req, res) => {
+  const { blocked } = req.body || {};
+  const db = getDB();
+  const user = db.users.find(u => u.id === req.params.id);
+  if (!user) return res.status(404).json({ error: 'Không tìm thấy tài khoản.' });
+  user.verificationBlocked = !!blocked;
+  saveDB(db);
+  res.json({ user: sanitize(user) });
+});
+
+// PUT /api/users/:id/counts  (admin sets a custom friend/follower count shown on the profile — pass null to reset to the real count)
+router.put('/:id/counts', requireAuth, requireAdmin, (req, res) => {
+  const { friendCount, followerCount } = req.body || {};
+  const db = getDB();
+  const user = db.users.find(u => u.id === req.params.id);
+  if (!user) return res.status(404).json({ error: 'Không tìm thấy tài khoản.' });
+  if (friendCount !== undefined) user.friendCountOverride = friendCount === null || friendCount === '' ? null : Math.max(0, parseInt(friendCount, 10) || 0);
+  if (followerCount !== undefined) user.followerCountOverride = followerCount === null || followerCount === '' ? null : Math.max(0, parseInt(followerCount, 10) || 0);
+  saveDB(db);
+  res.json({
+    friendCount: displayFriendCount(user),
+    followerCount: displayFollowerCount(db, user)
+  });
+});
+
+// POST /api/users/:id/avatar  (admin sets ANY user's avatar)
+router.post('/:id/avatar', requireAuth, requireAdmin, uploadAvatar.single('avatar'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Không có file được tải lên.' });
+  const db = getDB();
+  const user = db.users.find(u => u.id === req.params.id);
+  if (!user) return res.status(404).json({ error: 'Không tìm thấy tài khoản.' });
+  user.avatar = `/uploads/avatars/${req.file.filename}`;
   saveDB(db);
   res.json({ user: sanitize(user) });
 });
@@ -197,6 +262,7 @@ router.post('/me/request-verification', requireAuth, (req, res) => {
   const db = getDB();
   const user = db.users.find(u => u.id === req.user.id);
   if (user.verified) return res.status(409).json({ error: 'Tài khoản này đã được xác minh.' });
+  if (user.verificationBlocked) return res.status(403).json({ error: 'Tài khoản của bạn không được phép gửi yêu cầu tích xanh. Liên hệ Admin nếu có thắc mắc.' });
   const already = db.verificationRequests.find(r => r.userId === user.id && r.status === 'pending');
   if (already) return res.status(409).json({ error: 'Bạn đã gửi yêu cầu, vui lòng chờ Admin duyệt.' });
   db.verificationRequests.push({ id: uuid(), userId: user.id, status: 'pending', createdAt: new Date().toISOString() });
@@ -205,13 +271,15 @@ router.post('/me/request-verification', requireAuth, (req, res) => {
   res.status(201).json({ ok: true });
 });
 
-// PUT /api/users/me/preferences (theme, notifications)
+// PUT /api/users/me/preferences (theme, notifications, security incl. self-service 2FA)
 router.put('/me/preferences', requireAuth, (req, res) => {
-  const { theme, notifications } = req.body || {};
+  const { theme, notifications, security } = req.body || {};
   const db = getDB();
   const user = db.users.find(u => u.id === req.user.id);
   if (theme) user.theme = theme;
   if (notifications) user.notifications = { ...user.notifications, ...notifications };
+  if (security && typeof security.requireLoginOtp === 'boolean') user.security.requireLoginOtp = security.requireLoginOtp;
+  if (security && typeof security.emailOnLogin === 'boolean') user.security.emailOnLogin = security.emailOnLogin;
   saveDB(db);
   res.json({ user: sanitize(user) });
 });

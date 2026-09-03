@@ -46,8 +46,8 @@
         <h2 class="text-lg lg:text-2xl font-black leading-tight">Quantum Chat <span class="text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 to-amber-300">OS</span></h2>
       </div>
       <div class="flex items-center gap-2">
-        <a id="my-profile-link" href="profile.html" class="btn-primary text-xs"><i class="fa-solid fa-id-badge mr-1"></i>Trang cá nhân</a>
-        <a href="messages.html" class="btn-primary text-xs"><i class="fa-solid fa-message mr-1"></i>Trò Chuyện</a>
+        <a id="my-profile-link" href="profile.html" class="w-10 h-10 rounded-full overflow-hidden border-2 border-white/20 hover:border-cyan-400 transition-colors" title="Trang cá nhân"></a>
+        <a href="messages.html" class="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white hover:opacity-90 transition-opacity" title="Trò Chuyện"><i class="fa-solid fa-message"></i></a>
       </div>
     </header>
     <div id="mobile-drawer" class="hidden lg:hidden glass-panel rounded-3xl mb-4"><div id="mobile-nav-slot"></div></div>
@@ -83,6 +83,7 @@
                 <option value="friends">👥 Bạn bè</option>
                 <option value="private">🔒 Chỉ mình tôi</option>
               </select>
+              <button type="button" id="composer-emoji-btn" class="text-slate-400 hover:text-amber-300 w-8 h-8 flex items-center justify-center" title="Chèn emoji"><i class="fa-solid fa-face-smile"></i></button>
             </div>
             <div class="flex gap-2">
               <button onclick="openPreview()" class="text-xs px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10" id="preview-btn" disabled><i class="fa-solid fa-eye mr-1"></i>Xem trước</button>
@@ -161,6 +162,8 @@
 <script src="assets/js/api.js?v=20260830"></script>
 <script src="assets/js/layout.js?v=20260830"></script>
 <script src="assets/js/video-autoplay.js?v=20260830"></script>
+<script src="assets/js/emoji-picker.js?v=20260830"></script>
+<script src="assets/js/feed.js?v=20260830"></script>
 <script>
   let people = [];
   let composeFiles = []; // File objects, order = layout order
@@ -170,12 +173,15 @@
   if (EduLayout.guard('social')) {
     const me = EduAPI.getUser();
     document.getElementById('my-profile-link').href = `profile.html?id=${me.id}`;
+    document.getElementById('my-profile-link').innerHTML = me.avatar
+      ? `<img src="${EduAPI.fileUrl(me.avatar)}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='assets/img/broken-image.svg'">`
+      : `<img src="assets/img/default-avatar.svg" class="w-full h-full object-cover">`;
     loadFeed(); loadFriends(); loadStories();
   }
 
   function avatarHtml(u, size = 9) {
     const initials = (u.fullName || u.username || '?').trim().split(/\s+/).slice(-2).map(s => s[0]).join('').toUpperCase();
-    return u.avatar ? `<img src="${EduAPI.fileUrl(u.avatar)}" class="w-${size} h-${size} rounded-full object-cover" onerror="this.onerror=null;this.src=&quot;assets/img/broken-image.svg&quot;;this.classList.add(&quot;opacity-40&quot;)">` : `<div class="avatar-initial w-${size} h-${size} text-xs">${initials}</div>`;
+    return u.avatar ? `<img src="${EduAPI.fileUrl(u.avatar)}" class="w-${size} h-${size} rounded-full object-cover" onerror="this.onerror=null;this.src=&quot;assets/img/broken-image.svg&quot;;this.classList.add(&quot;opacity-40&quot;)">` : `<img src="assets/img/default-avatar.svg" class="w-${size} h-${size} rounded-full object-cover">`;
   }
   function nameHtml(u) { return `${escapeHtml(u.fullName || u.username)}${EduLayout.verifiedBadge(u)}`; }
   function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
@@ -231,17 +237,7 @@
   }
   function removeComposeFile(i) { composeFiles.splice(i, 1); renderComposeThumbs(); }
 
-  function gridClass(n) { return n === 1 ? 'g1' : n === 2 ? 'g2' : n === 3 ? 'g3' : 'g4'; }
-  function imagesGridHtml(urls) {
-    if (!urls.length) return '';
-    const shown = urls.slice(0, 4);
-    const extra = urls.length - 4;
-    return `<div class="img-grid ${gridClass(shown.length)} mb-2">${shown.map((u, i) => `
-      <div style="position:relative">
-        <img src="${u}" onerror="this.onerror=null;this.src='assets/img/broken-image.svg'">
-        ${i === 3 && extra > 0 ? `<div style="position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1.25rem">+${extra}</div>` : ''}
-      </div>`).join('')}</div>`;
-  }
+  EduEmoji.attach(document.getElementById('composer-emoji-btn'), document.getElementById('post-content'));
 
   function openModal(id) { const el = document.getElementById(id); el.classList.remove('hidden'); el.classList.add('is-open'); }
   function closeModal(id) { const el = document.getElementById(id); el.classList.add('hidden'); el.classList.remove('is-open'); if (id === 'story-view-modal') clearInterval(storyTimer); }
@@ -254,7 +250,7 @@
     document.getElementById('preview-body').innerHTML = `
       <div class="flex items-center gap-3 mb-2">${avatarHtml(me)}<div><p class="font-bold text-sm flex items-center">${nameHtml(me)}</p><p class="text-[10px] text-slate-500">Vừa xong · ${document.getElementById('post-privacy').selectedOptions[0].text}</p></div></div>
       <p class="text-sm mb-2 whitespace-pre-wrap">${escapeHtml(content)}</p>
-      ${imagesGridHtml(urls)}
+      ${EduFeed.imagesGridHtml(urls)}
       ${videoUrl ? `<video src="${videoUrl}" controls muted class="w-full max-h-80 rounded-2xl bg-black object-contain mb-2"></video>` : ''}
       ${!content && !urls.length && !videoUrl ? '<p class="text-slate-500 text-xs">Bài viết trống — hãy nhập nội dung hoặc thêm ảnh/video.</p>' : ''}
     `;
@@ -266,36 +262,9 @@
 
   async function loadFeed() {
     const { posts } = await EduAPI.request('/api/posts');
-    const me = EduAPI.getUser();
-    document.getElementById('feed').innerHTML = posts.map(p => {
-      const imgs = (p.images && p.images.length ? p.images : (p.image ? [p.image] : [])).map(EduAPI.fileUrl);
-      return `
-      <div class="glass-panel p-4 rounded-3xl mb-4">
-        <div class="flex items-center gap-3 mb-2">
-          ${p.author ? `<a href="profile.html?id=${p.author.id}">${avatarHtml(p.author)}</a>` : ''}
-          <div>
-            <a href="profile.html?id=${p.author ? p.author.id : ''}" class="font-bold text-sm hover:underline flex items-center">${p.author ? nameHtml(p.author) : 'Ẩn danh'}</a>
-            <p class="text-[10px] text-slate-500">${new Date(p.createdAt).toLocaleString('vi-VN')} · ${p.privacy === 'friends' ? '👥 Bạn bè' : p.privacy === 'private' ? '🔒 Chỉ mình tôi' : '🌐 Công khai'}</p>
-          </div>
-          ${(p.author && p.author.id === me.id) || me.role === 'admin' ? `<button onclick="deletePost('${p.id}')" class="ml-auto text-rose-400 text-xs"><i class="fa-solid fa-trash"></i></button>` : ''}
-        </div>
-        <p class="text-sm mb-2 whitespace-pre-wrap">${escapeHtml(p.content)}</p>
-        ${imagesGridHtml(imgs)}
-        ${p.video ? EduVideo.renderVideoBlock(EduAPI.fileUrl(p.video), { extraClass: 'max-h-[520px]' }) : ''}
-        <div class="flex items-center gap-4 text-xs text-slate-400 border-t border-white/5 pt-2">
-          <button onclick="likePost('${p.id}')" class="hover:text-pink-400"><i class="fa-solid fa-heart mr-1"></i>${p.likeCount} Thích</button>
-          <span><i class="fa-solid fa-comment mr-1"></i>${p.commentCount} Bình luận</span>
-        </div>
-        <div class="mt-2 space-y-1">
-          ${p.comments.slice(-3).map(c => `<p class="text-xs text-slate-300"><b>${c.authorId === me.id ? 'Bạn' : 'User'}:</b> ${escapeHtml(c.content)}</p>`).join('')}
-        </div>
-        <div class="flex gap-2 mt-2">
-          <input class="input-field text-xs" placeholder="Viết bình luận..." onkeydown="if(event.key==='Enter')commentPost('${p.id}', this)">
-        </div>
-      </div>`;
-    }).join('') || '<p class="text-slate-500 text-sm">Chưa có bài viết nào. Hãy là người đầu tiên chia sẻ!</p>';
-    EduVideo.observeAll(document.getElementById('feed'));
+    EduFeed.renderList(document.getElementById('feed'), posts);
   }
+  EduFeed.setReloadCallback(loadFeed);
 
   async function createPost() {
     const content = document.getElementById('post-content').value.trim();
@@ -315,13 +284,6 @@
       EduAPI.toast('Đã đăng bài!', 'success');
     } catch (err) { EduAPI.toast(err.message, 'error'); }
   }
-  async function likePost(id) { await EduAPI.request(`/api/posts/${id}/like`, { method: 'POST' }); loadFeed(); }
-  async function commentPost(id, input) {
-    const content = input.value.trim(); if (!content) return;
-    await EduAPI.request(`/api/posts/${id}/comments`, { method: 'POST', body: { content } });
-    input.value = ''; loadFeed();
-  }
-  async function deletePost(id) { if (!confirm('Xoá bài viết này?')) return; await EduAPI.request(`/api/posts/${id}`, { method: 'DELETE' }); loadFeed(); }
 
   /* ---------------- Stories ---------------- */
   async function loadStories() {

@@ -78,6 +78,32 @@ select.input-field option, select.select-field option { background: #12102a; col
 /* Page content already sits on "relative z-10" wrappers, so this just needs to stay behind at z-0. */
 #edu-particles-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .55; }
 
+/* ---- Emoji picker popup ---- */
+.edu-emoji-popup {
+  position: fixed;
+  width: 260px;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--edu-panel-bg, #14101f);
+  border: 1px solid var(--edu-panel-border, rgba(255,255,255,.1));
+  border-radius: 1rem;
+  padding: .5rem;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 2px;
+  z-index: 3000;
+  box-shadow: 0 12px 32px rgba(0,0,0,.5);
+}
+.edu-emoji-item {
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: .4rem;
+  border-radius: .5rem;
+  background: transparent;
+  transition: background .15s;
+}
+.edu-emoji-item:hover { background: rgba(255,255,255,.08); }
+
 /* ---- Toggle switch (iOS-style), used in admin forms ---- */
 .qc-toggle { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; }
 .qc-toggle input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; z-index: 1; }

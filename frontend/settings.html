@@ -9,6 +9,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="assets/css/shared.css?v=20260830">
+<style>
+  .settings-tab{padding:.6rem 1.1rem;border-radius:.9rem;font-weight:700;font-size:.8rem;white-space:nowrap;display:flex;align-items:center;gap:.4rem}
+  .settings-tab.active{background:linear-gradient(90deg,#00f0ff,#6d28d9);color:#fff}
+</style>
 </head>
 <body class="bg-brand-950 text-slate-100 font-sans min-h-screen relative overflow-x-hidden">
 <div id="toast-notif-box" class="fixed top-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
@@ -21,44 +25,92 @@
     </header>
     <div id="mobile-drawer" class="hidden lg:hidden glass-panel rounded-3xl mb-4"><div id="mobile-nav-slot"></div></div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div class="glass-panel p-6 rounded-3xl">
-        <h3 class="font-black mb-4"><i class="fa-solid fa-id-badge mr-2 text-cyan-400"></i>Hồ Sơ Cá Nhân</h3>
-        <div class="flex items-center gap-4 mb-4">
-          <img id="avatar-preview" class="w-16 h-16 rounded-2xl object-cover bg-white/5">
-          <input type="file" id="avatar-input" accept="image/*" onchange="uploadAvatar(this)">
-        </div>
-        <form id="profile-form" class="space-y-3">
-          <input id="s-fullname" class="input-field" placeholder="Họ và tên">
-          <input id="s-email" type="email" class="input-field" placeholder="Email">
-          <textarea id="s-bio" class="input-field" placeholder="Giới thiệu bản thân"></textarea>
-          <button type="submit" class="btn-primary text-sm w-full">Lưu Hồ Sơ</button>
-        </form>
-      </div>
+    <div class="glass-panel p-2 rounded-2xl flex gap-2 mb-4 overflow-x-auto">
+      <button class="settings-tab active" id="tab-profile-btn" onclick="switchSettingsTab('profile')"><i class="fa-solid fa-id-badge"></i>Hồ sơ</button>
+      <button class="settings-tab" id="tab-personal-btn" onclick="switchSettingsTab('personal')"><i class="fa-solid fa-cake-candles"></i>Thông tin cá nhân</button>
+      <button class="settings-tab" id="tab-security-btn" onclick="switchSettingsTab('security')"><i class="fa-solid fa-shield-halved"></i>Bảo mật</button>
+      <button class="settings-tab" id="tab-appearance-btn" onclick="switchSettingsTab('appearance')"><i class="fa-solid fa-palette"></i>Giao diện</button>
+      <button class="settings-tab" id="tab-notifications-btn" onclick="switchSettingsTab('notifications')"><i class="fa-solid fa-bell"></i>Thông báo</button>
+    </div>
 
+    <div id="settings-tab-profile" class="glass-panel p-6 rounded-3xl max-w-2xl">
+      <h3 class="font-black mb-4"><i class="fa-solid fa-id-badge mr-2 text-cyan-400"></i>Hồ Sơ Cá Nhân</h3>
+      <div class="flex items-center gap-4 mb-4">
+        <img id="avatar-preview" src="assets/img/default-avatar.svg" class="w-16 h-16 rounded-2xl object-cover bg-white/5 border border-white/10">
+        <input type="file" id="avatar-input" accept="image/*" onchange="uploadAvatar(this)">
+      </div>
+      <form id="profile-form" class="space-y-3">
+        <label class="text-xs font-bold text-slate-400">Họ và tên</label>
+        <input id="s-fullname" class="input-field" placeholder="Họ và tên">
+        <label class="text-xs font-bold text-slate-400">Email</label>
+        <input id="s-email" type="email" class="input-field" placeholder="Email">
+        <label class="text-xs font-bold text-slate-400">Số điện thoại</label>
+        <input id="s-phone" class="input-field" placeholder="Số điện thoại">
+        <label class="text-xs font-bold text-slate-400">Giới thiệu bản thân</label>
+        <textarea id="s-bio" class="input-field" placeholder="Giới thiệu bản thân"></textarea>
+        <button type="submit" class="btn-primary text-sm w-full">Lưu Hồ Sơ</button>
+      </form>
+    </div>
+
+    <div id="settings-tab-personal" class="hidden glass-panel p-6 rounded-3xl max-w-2xl">
+      <h3 class="font-black mb-4"><i class="fa-solid fa-cake-candles mr-2 text-pink-400"></i>Thông Tin Cá Nhân</h3>
+      <label class="text-xs font-bold text-slate-400">Ngày sinh</label>
+      <div class="grid grid-cols-3 gap-2 mt-1 mb-4">
+        <select id="s-bday-day" class="select-field text-sm"><option value="">Ngày</option></select>
+        <select id="s-bday-month" class="select-field text-sm"><option value="">Tháng</option></select>
+        <select id="s-bday-year" class="select-field text-sm"><option value="">Năm</option></select>
+      </div>
+      <p class="text-[11px] text-slate-500 mb-4">Đến ngày sinh nhật, hệ thống sẽ tự thông báo cho bạn bè của bạn.</p>
+      <label class="text-xs font-bold text-slate-400">Sống tại</label>
+      <input id="s-location" class="input-field text-sm mt-1 mb-3" placeholder="VD: Hà Nội, Việt Nam">
+      <label class="text-xs font-bold text-slate-400">Học vấn</label>
+      <input id="s-education" class="input-field text-sm mt-1 mb-3" placeholder="Tên trường">
+      <label class="text-xs font-bold text-slate-400">Website / liên hệ khác</label>
+      <input id="s-website" class="input-field text-sm mt-1 mb-4" placeholder="VD: instagram.com/...">
+      <button onclick="savePersonalInfo()" class="btn-primary text-sm w-full">Lưu Thông Tin</button>
+    </div>
+
+    <div id="settings-tab-security" class="hidden space-y-6 max-w-2xl">
       <div class="glass-panel p-6 rounded-3xl">
-        <h3 class="font-black mb-4"><i class="fa-solid fa-shield-halved mr-2 text-rose-400"></i>Bảo Mật</h3>
+        <h3 class="font-black mb-4"><i class="fa-solid fa-key mr-2 text-rose-400"></i>Đổi Mật Khẩu</h3>
         <form id="password-form" class="space-y-3">
           <input id="s-current-pw" type="password" class="input-field" placeholder="Mật khẩu hiện tại">
           <input id="s-new-pw" type="password" class="input-field" placeholder="Mật khẩu mới (>=6 ký tự)">
           <button type="submit" class="btn-primary text-sm w-full">Đổi Mật Khẩu</button>
         </form>
       </div>
-
       <div class="glass-panel p-6 rounded-3xl">
-        <h3 class="font-black mb-4"><i class="fa-solid fa-palette mr-2 text-amber-400"></i>Giao Diện</h3>
-        <div class="flex gap-2">
-          <button onclick="setTheme('dark')" class="flex-1 py-2.5 rounded-xl bg-white/5 font-bold text-sm">Tối (Dark)</button>
-          <button onclick="setTheme('light')" class="flex-1 py-2.5 rounded-xl bg-white/5 font-bold text-sm">Sáng (Light)</button>
-        </div>
+        <h3 class="font-black mb-4"><i class="fa-solid fa-shield-halved mr-2 text-emerald-400"></i>Bảo Mật Hai Lớp</h3>
+        <label class="flex items-center justify-between p-3 rounded-xl bg-white/5 mb-2">
+          <div class="pr-3">
+            <p class="text-sm font-bold">Yêu cầu mã OTP khi đăng nhập</p>
+            <p class="text-[11px] text-slate-500 mt-0.5">Mỗi lần đăng nhập, hệ thống sẽ gửi mã xác nhận qua email trước khi cho vào tài khoản.</p>
+          </div>
+          <span class="qc-toggle flex-shrink-0"><input type="checkbox" id="s-2fa" onchange="saveSecurityToggle()"><span class="qc-toggle-track"></span></span>
+        </label>
+        <label class="flex items-center justify-between p-3 rounded-xl bg-white/5">
+          <div class="pr-3">
+            <p class="text-sm font-bold">Email thông báo khi đăng nhập</p>
+            <p class="text-[11px] text-slate-500 mt-0.5">Nhận email mỗi khi tài khoản của bạn được đăng nhập.</p>
+          </div>
+          <span class="qc-toggle flex-shrink-0"><input type="checkbox" id="s-login-email" onchange="saveSecurityToggle()"><span class="qc-toggle-track"></span></span>
+        </label>
       </div>
+    </div>
 
-      <div class="glass-panel p-6 rounded-3xl">
-        <h3 class="font-black mb-4"><i class="fa-solid fa-bell mr-2 text-emerald-400"></i>Thông Báo</h3>
-        <label class="flex items-center justify-between py-2 text-sm"><span>Email</span><input type="checkbox" id="notif-email" onchange="saveNotif()"></label>
-        <label class="flex items-center justify-between py-2 text-sm"><span>Đẩy (Push)</span><input type="checkbox" id="notif-push" onchange="saveNotif()"></label>
-        <label class="flex items-center justify-between py-2 text-sm"><span>Trò chuyện</span><input type="checkbox" id="notif-chat" onchange="saveNotif()"></label>
+    <div id="settings-tab-appearance" class="hidden glass-panel p-6 rounded-3xl max-w-2xl">
+      <h3 class="font-black mb-4"><i class="fa-solid fa-palette mr-2 text-amber-400"></i>Giao Diện</h3>
+      <div class="flex gap-2">
+        <button onclick="setTheme('dark')" class="flex-1 py-2.5 rounded-xl bg-white/5 font-bold text-sm">Tối (Dark)</button>
+        <button onclick="setTheme('light')" class="flex-1 py-2.5 rounded-xl bg-white/5 font-bold text-sm">Sáng (Light)</button>
       </div>
+    </div>
+
+    <div id="settings-tab-notifications" class="hidden glass-panel p-6 rounded-3xl max-w-2xl">
+      <h3 class="font-black mb-4"><i class="fa-solid fa-bell mr-2 text-emerald-400"></i>Thông Báo</h3>
+      <label class="flex items-center justify-between py-2 text-sm"><span>Email</span><input type="checkbox" id="notif-email" onchange="saveNotif()"></label>
+      <label class="flex items-center justify-between py-2 text-sm"><span>Đẩy (Push)</span><input type="checkbox" id="notif-push" onchange="saveNotif()"></label>
+      <label class="flex items-center justify-between py-2 text-sm"><span>Trò chuyện</span><input type="checkbox" id="notif-chat" onchange="saveNotif()"></label>
     </div>
   </main>
 </div>
@@ -69,20 +121,49 @@
 <script src="assets/js/api.js?v=20260830"></script>
 <script src="assets/js/layout.js?v=20260830"></script>
 <script>
-  if (EduLayout.guard('settings')) { fillForm(); }
+  if (EduLayout.guard('settings')) { populateBirthdaySelects(); fillForm(); }
   EduAPI.enablePasswordToggle('s-current-pw');
   EduAPI.enablePasswordToggle('s-new-pw');
   EduAPI.enableFancyFileInput('avatar-input', 'Chọn Ảnh Đại Diện');
+
+  function switchSettingsTab(tab) {
+    ['profile', 'personal', 'security', 'appearance', 'notifications'].forEach(t => {
+      document.getElementById(`settings-tab-${t}`).classList.toggle('hidden', t !== tab);
+      document.getElementById(`tab-${t}-btn`).classList.toggle('active', t === tab);
+    });
+  }
+
+  function populateBirthdaySelects() {
+    const day = document.getElementById('s-bday-day');
+    const month = document.getElementById('s-bday-month');
+    const year = document.getElementById('s-bday-year');
+    for (let d = 1; d <= 31; d++) day.innerHTML += `<option value="${d}">${d}</option>`;
+    for (let m = 1; m <= 12; m++) month.innerHTML += `<option value="${m}">Tháng ${m}</option>`;
+    const thisYear = new Date().getFullYear();
+    for (let y = thisYear; y >= thisYear - 100; y--) year.innerHTML += `<option value="${y}">${y}</option>`;
+  }
 
   function fillForm() {
     const u = EduAPI.getUser();
     document.getElementById('s-fullname').value = u.fullName || '';
     document.getElementById('s-email').value = u.email || '';
+    document.getElementById('s-phone').value = u.phone || '';
     document.getElementById('s-bio').value = u.bio || '';
-    document.getElementById('avatar-preview').src = u.avatar ? EduAPI.fileUrl(u.avatar) : '';
+    document.getElementById('avatar-preview').src = u.avatar ? EduAPI.fileUrl(u.avatar) : 'assets/img/default-avatar.svg';
     document.getElementById('notif-email').checked = !!(u.notifications && u.notifications.email);
     document.getElementById('notif-push').checked = !!(u.notifications && u.notifications.push);
     document.getElementById('notif-chat').checked = !!(u.notifications && u.notifications.chat);
+    document.getElementById('s-2fa').checked = !!(u.security && u.security.requireLoginOtp);
+    document.getElementById('s-login-email').checked = !!(u.security && u.security.emailOnLogin);
+    document.getElementById('s-location').value = u.location || '';
+    document.getElementById('s-education').value = u.education || '';
+    document.getElementById('s-website').value = u.website || '';
+    if (u.birthday) {
+      const [y, m, d] = u.birthday.split('-');
+      document.getElementById('s-bday-day').value = String(Number(d));
+      document.getElementById('s-bday-month').value = String(Number(m));
+      document.getElementById('s-bday-year').value = y;
+    }
   }
 
   document.getElementById('profile-form').addEventListener('submit', async (e) => {
@@ -91,12 +172,30 @@
       const { user } = await EduAPI.request('/api/users/me/profile', { method: 'PUT', body: {
         fullName: document.getElementById('s-fullname').value,
         email: document.getElementById('s-email').value,
+        phone: document.getElementById('s-phone').value,
         bio: document.getElementById('s-bio').value
       }});
       EduAPI.setUser(user);
       EduAPI.toast('Đã lưu hồ sơ.', 'success');
     } catch (err) { EduAPI.toast(err.message, 'error'); }
   });
+
+  async function savePersonalInfo() {
+    const d = document.getElementById('s-bday-day').value;
+    const m = document.getElementById('s-bday-month').value;
+    const y = document.getElementById('s-bday-year').value;
+    const birthday = (d && m && y) ? `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}` : '';
+    try {
+      const { user } = await EduAPI.request('/api/users/me/profile', { method: 'PUT', body: {
+        birthday,
+        location: document.getElementById('s-location').value,
+        education: document.getElementById('s-education').value,
+        website: document.getElementById('s-website').value
+      }});
+      EduAPI.setUser(user);
+      EduAPI.toast('Đã lưu thông tin cá nhân.', 'success');
+    } catch (err) { EduAPI.toast(err.message, 'error'); }
+  }
 
   document.getElementById('password-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -109,6 +208,18 @@
       e.target.reset();
     } catch (err) { EduAPI.toast(err.message, 'error'); }
   });
+
+  async function saveSecurityToggle() {
+    const security = {
+      requireLoginOtp: document.getElementById('s-2fa').checked,
+      emailOnLogin: document.getElementById('s-login-email').checked
+    };
+    try {
+      const { user } = await EduAPI.request('/api/users/me/preferences', { method: 'PUT', body: { security } });
+      EduAPI.setUser(user);
+      EduAPI.toast('Đã lưu cài đặt bảo mật.', 'success');
+    } catch (err) { EduAPI.toast(err.message, 'error'); }
+  }
 
   async function uploadAvatar(input) {
     const file = input.files[0]; if (!file) return;

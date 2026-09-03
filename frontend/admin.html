@@ -109,6 +109,14 @@
   <div class="glass-panel p-6 rounded-3xl w-full max-w-md">
     <h3 class="font-black text-lg mb-4"><i class="fa-solid fa-user-plus mr-2"></i>Tạo Tài Khoản Mới</h3>
     <form id="create-form" class="space-y-3">
+      <div class="flex items-center gap-3">
+        <label class="relative cursor-pointer flex-shrink-0" title="Chọn ảnh đại diện">
+          <img id="c-avatar-preview" src="assets/img/default-avatar.svg" class="w-16 h-16 rounded-full object-cover border-2 border-white/10">
+          <span class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-cyan-500 text-white flex items-center justify-center text-[10px]"><i class="fa-solid fa-camera"></i></span>
+          <input type="file" id="c-avatar" accept="image/*" class="hidden">
+        </label>
+        <p class="text-[11px] text-slate-500">Ảnh đại diện (không bắt buộc — để trống sẽ dùng ảnh mặc định)</p>
+      </div>
       <input required id="c-username" class="input-field" placeholder="Tên đăng nhập">
       <input required id="c-password" type="password" class="input-field" placeholder="Mật khẩu (tối thiểu 6 ký tự)">
       <input id="c-fullname" class="input-field" placeholder="Họ và tên">
@@ -163,6 +171,54 @@
   </div>
 </div>
 
+<!-- Edit user (advanced) modal -->
+<div id="edit-user-modal" class="fixed inset-0 z-[2000] bg-black/60 hidden items-center justify-center p-4">
+  <div class="glass-panel p-6 rounded-3xl w-full max-w-md max-h-[85vh] overflow-y-auto">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-black text-lg"><i class="fa-solid fa-user-pen text-fuchsia-400 mr-2"></i>Sửa Nâng Cao</h3>
+      <button onclick="closeModal('edit-user-modal')" class="text-slate-400"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="flex items-center gap-3 mb-4">
+      <label class="relative cursor-pointer flex-shrink-0" title="Đổi ảnh đại diện">
+        <img id="eu-avatar-preview" class="w-16 h-16 rounded-full object-cover border-2 border-white/10">
+        <span class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-cyan-500 text-white flex items-center justify-center text-[10px]"><i class="fa-solid fa-camera"></i></span>
+        <input type="file" id="eu-avatar" accept="image/*" class="hidden">
+      </label>
+      <div>
+        <p id="eu-username" class="font-bold text-sm"></p>
+        <p class="text-[11px] text-slate-500">Đổi ảnh sẽ lưu ngay lập tức</p>
+      </div>
+    </div>
+
+    <div class="space-y-2 mb-4">
+      <label class="flex items-center justify-between p-3 rounded-xl bg-white/5">
+        <span class="text-xs flex items-center gap-1.5"><i class="fa-solid fa-circle-check text-sky-400"></i> Tích xanh (đã xác minh)</span>
+        <span class="qc-toggle"><input type="checkbox" id="eu-verified" onchange="euToggleVerified(this.checked)"><span class="qc-toggle-track"></span></span>
+      </label>
+      <label class="flex items-center justify-between p-3 rounded-xl bg-white/5">
+        <span class="text-xs flex items-center gap-1.5"><i class="fa-solid fa-ban text-rose-400"></i> Chặn xin tích xanh</span>
+        <span class="qc-toggle"><input type="checkbox" id="eu-verification-blocked" onchange="euToggleVerificationLock(this.checked)"><span class="qc-toggle-track"></span></span>
+      </label>
+    </div>
+
+    <p class="text-[11px] text-slate-500 mb-2">Số hiển thị trên trang cá nhân (để trống = dùng số thật):</p>
+    <div class="grid grid-cols-2 gap-2 mb-2">
+      <div>
+        <label class="text-[10px] font-bold text-slate-400">Số bạn bè</label>
+        <input id="eu-friend-count" type="number" min="0" class="input-field text-sm mt-1" placeholder="Số thật">
+      </div>
+      <div>
+        <label class="text-[10px] font-bold text-slate-400">Số follow</label>
+        <input id="eu-follower-count" type="number" min="0" class="input-field text-sm mt-1" placeholder="Số thật">
+      </div>
+    </div>
+    <button onclick="euSaveCounts()" class="w-full py-2 rounded-xl bg-white/5 text-xs font-bold mb-1">Lưu số hiển thị</button>
+    <p class="text-[10px] text-slate-600 mb-4">Số thật hiện tại: <span id="eu-counts-real"></span></p>
+
+    <button onclick="closeModal('edit-user-modal')" class="w-full py-2.5 btn-primary text-sm">Đóng</button>
+  </div>
+</div>
+
 <script src="assets/js/particles.js?v=20260830"></script>
 <script src="assets/js/config.js?v=20260830"></script>
 <script src="assets/js/cursor.js?v=20260830"></script>
@@ -184,12 +240,14 @@
   function roleColor(r) { return r === 'admin' ? 'text-rose-400' : 'text-blue-400'; }
   function avatarHtml(u, size) {
     const initials = (u.fullName || u.username || '?').trim().split(/\s+/).slice(-2).map(x => x[0]).join('').toUpperCase();
-    return u.avatar ? `<img src="${EduAPI.fileUrl(u.avatar)}" class="w-${size} h-${size} rounded-full object-cover" onerror="this.onerror=null;this.src=&quot;assets/img/broken-image.svg&quot;;this.classList.add(&quot;opacity-40&quot;)">` : `<div class="avatar-initial w-${size} h-${size} text-xs">${initials}</div>`;
+    return u.avatar ? `<img src="${EduAPI.fileUrl(u.avatar)}" class="w-${size} h-${size} rounded-full object-cover" onerror="this.onerror=null;this.src=&quot;assets/img/broken-image.svg&quot;;this.classList.add(&quot;opacity-40&quot;)">` : `<img src="assets/img/default-avatar.svg" class="w-${size} h-${size} rounded-full object-cover">`;
   }
 
+  let allUsersCache = [];
   async function loadAccounts() {
     try {
       const { users } = await EduAPI.request('/api/users');
+      allUsersCache = users;
       const body = document.getElementById('accounts-table-body');
       body.innerHTML = users.map(u => `
         <tr class="border-t border-white/5">
@@ -207,6 +265,7 @@
           </td>
           <td class="py-3 px-6 text-right space-x-3">
             ${u.id !== 'ADMIN1' ? `
+              <button onclick='openEditUserModal(${JSON.stringify(u)})' class="text-fuchsia-400 hover:text-fuchsia-300 inline-flex items-center justify-center" style="min-width:28px;min-height:28px" title="Sửa nâng cao"><i class="fa-solid fa-user-pen"></i></button>
               <button onclick="toggleStatus('${u.id}','${u.status}')" class="text-amber-400 hover:text-amber-300 inline-flex items-center justify-center" style="min-width:28px;min-height:28px" title="Khoá/Mở khoá"><i class="fa-solid fa-lock"></i></button>
               <button onclick="resetPassword('${u.id}', '${u.username}')" class="text-cyan-400 hover:text-cyan-300 inline-flex items-center justify-center" style="min-width:28px;min-height:28px" title="Đặt lại mật khẩu"><i class="fa-solid fa-key"></i></button>
               <button onclick="deleteAccount('${u.id}')" class="text-rose-400 hover:text-rose-300 inline-flex items-center justify-center" style="min-width:28px;min-height:28px" title="Xoá"><i class="fa-solid fa-trash"></i></button>
@@ -258,11 +317,62 @@
     catch (err) { EduAPI.toast(err.message, 'error'); }
   }
 
+  /* ---------------- Edit user (advanced) modal ---------------- */
+  let editUserTarget = null;
+  function openEditUserModal(u) {
+    editUserTarget = u;
+    document.getElementById('eu-username').textContent = `@${u.username}`;
+    document.getElementById('eu-avatar-preview').src = u.avatar ? EduAPI.fileUrl(u.avatar) : 'assets/img/default-avatar.svg';
+    document.getElementById('eu-verified').checked = !!u.verified;
+    document.getElementById('eu-verified').disabled = u.role === 'admin';
+    document.getElementById('eu-verification-blocked').checked = !!u.verificationBlocked;
+    document.getElementById('eu-friend-count').value = u.friendCountOverride !== null && u.friendCountOverride !== undefined ? u.friendCountOverride : '';
+    document.getElementById('eu-follower-count').value = u.followerCountOverride !== null && u.followerCountOverride !== undefined ? u.followerCountOverride : '';
+    document.getElementById('eu-counts-real').textContent = `${(u.friends || []).length} bạn bè thật · ${allUsersCache.filter(x => (x.following || []).includes(u.id)).length} follow thật`;
+    openModal('edit-user-modal');
+  }
+  document.getElementById('eu-avatar').addEventListener('change', async e => {
+    const file = e.target.files[0]; if (!file || !editUserTarget) return;
+    const fd = new FormData(); fd.append('avatar', file);
+    try {
+      const { user } = await EduAPI.request(`/api/users/${editUserTarget.id}/avatar`, { method: 'POST', body: fd, isForm: true });
+      document.getElementById('eu-avatar-preview').src = EduAPI.fileUrl(user.avatar);
+      EduAPI.toast('Đã đổi ảnh đại diện.', 'success');
+      loadAccounts();
+    } catch (err) { EduAPI.toast(err.message, 'error'); }
+  });
+  async function euToggleVerified(checked) {
+    try {
+      await EduAPI.request(`/api/users/${editUserTarget.id}/verified`, { method: 'PUT', body: { verified: checked } });
+      EduAPI.toast(checked ? 'Đã cấp tích xanh.' : 'Đã gỡ tích xanh.', 'success');
+      loadAccounts();
+    } catch (err) { EduAPI.toast(err.message, 'error'); document.getElementById('eu-verified').checked = !checked; }
+  }
+  async function euToggleVerificationLock(checked) {
+    try {
+      await EduAPI.request(`/api/users/${editUserTarget.id}/verification-lock`, { method: 'PUT', body: { blocked: checked } });
+      EduAPI.toast(checked ? 'Đã chặn tài khoản này xin tích xanh.' : 'Đã bỏ chặn.', 'success');
+    } catch (err) { EduAPI.toast(err.message, 'error'); document.getElementById('eu-verification-blocked').checked = !checked; }
+  }
+  async function euSaveCounts() {
+    const fVal = document.getElementById('eu-friend-count').value;
+    const wVal = document.getElementById('eu-follower-count').value;
+    try {
+      await EduAPI.request(`/api/users/${editUserTarget.id}/counts`, {
+        method: 'PUT',
+        body: { friendCount: fVal === '' ? null : Number(fVal), followerCount: wVal === '' ? null : Number(wVal) }
+      });
+      EduAPI.toast('Đã lưu số hiển thị.', 'success');
+    } catch (err) { EduAPI.toast(err.message, 'error'); }
+  }
+
   function openCreateModal() {
     document.getElementById('create-modal').classList.remove('hidden'); document.getElementById('create-modal').classList.add('flex');
     document.getElementById('c-role').value = 'user';
     onCreateRoleChange('user');
     document.getElementById('c-verified').checked = false;
+    createAvatarFile = null;
+    document.getElementById('c-avatar-preview').src = 'assets/img/default-avatar.svg';
   }
   function closeCreateModal() { document.getElementById('create-modal').classList.add('hidden'); document.getElementById('create-modal').classList.remove('flex'); }
 
@@ -272,22 +382,33 @@
     else { verifiedBox.disabled = false; }
   }
 
+  let createAvatarFile = null;
+  document.getElementById('c-avatar').addEventListener('change', e => {
+    const file = e.target.files[0]; if (!file) return;
+    createAvatarFile = file;
+    document.getElementById('c-avatar-preview').src = URL.createObjectURL(file);
+  });
+
   document.getElementById('create-form').addEventListener('submit', async (e) => {
     e.preventDefault();
+    const fd = new FormData();
+    fd.append('username', document.getElementById('c-username').value.trim());
+    fd.append('password', document.getElementById('c-password').value);
+    fd.append('fullName', document.getElementById('c-fullname').value.trim());
+    fd.append('email', document.getElementById('c-email').value.trim());
+    fd.append('phone', document.getElementById('c-phone').value.trim());
+    fd.append('role', document.getElementById('c-role').value);
+    fd.append('verified', document.getElementById('c-verified').checked);
+    fd.append('requireLoginOtp', document.getElementById('c-otp').checked);
+    fd.append('emailOnLogin', document.getElementById('c-email-login').checked);
+    if (createAvatarFile) fd.append('avatar', createAvatarFile);
     try {
-      await EduAPI.request('/api/users', { method: 'POST', body: {
-        username: document.getElementById('c-username').value.trim(),
-        password: document.getElementById('c-password').value,
-        fullName: document.getElementById('c-fullname').value.trim(),
-        email: document.getElementById('c-email').value.trim(),
-        phone: document.getElementById('c-phone').value.trim(),
-        role: document.getElementById('c-role').value,
-        verified: document.getElementById('c-verified').checked,
-        requireLoginOtp: document.getElementById('c-otp').checked,
-        emailOnLogin: document.getElementById('c-email-login').checked
-      }});
+      await EduAPI.request('/api/users', { method: 'POST', body: fd, isForm: true });
       EduAPI.toast('Đã tạo tài khoản mới.', 'success');
-      closeCreateModal(); e.target.reset(); loadAccounts();
+      closeCreateModal(); e.target.reset();
+      createAvatarFile = null;
+      document.getElementById('c-avatar-preview').src = 'assets/img/default-avatar.svg';
+      loadAccounts();
     } catch (err) { EduAPI.toast(err.message, 'error'); }
   });
 

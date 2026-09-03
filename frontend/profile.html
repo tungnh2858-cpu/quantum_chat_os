@@ -67,7 +67,12 @@
           <div class="pb-2">
             <h1 id="profile-name" class="text-2xl font-black flex items-center gap-2"></h1>
             <p id="profile-meta" class="text-xs text-slate-400"></p>
-            <p id="profile-friend-count" class="text-xs text-slate-500 mt-1"></p>
+            <p id="profile-counts" class="text-xs text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
+              <span id="profile-friend-count"></span>
+              <span class="text-slate-700">·</span>
+              <span id="profile-follower-count"></span>
+              <button id="counts-edit-btn" onclick="openCountsModal()" class="hidden text-cyan-400 hover:text-cyan-300" title="Admin: chỉnh số bạn bè / follow"><i class="fa-solid fa-pen text-[10px]"></i></button>
+            </p>
           </div>
         </div>
         <div class="pb-2 flex gap-2 flex-wrap">
@@ -112,6 +117,7 @@
                   <option value="friends">👥 Bạn bè</option>
                   <option value="private">🔒 Chỉ mình tôi</option>
                 </select>
+                <button type="button" id="composer-emoji-btn" class="text-slate-400 hover:text-amber-300 w-8 h-8 flex items-center justify-center" title="Chèn emoji"><i class="fa-solid fa-face-smile"></i></button>
               </div>
               <button onclick="createPost()" class="btn-primary text-xs"><i class="fa-solid fa-paper-plane mr-1"></i>Đăng</button>
             </div>
@@ -176,12 +182,35 @@
   </div>
 </div>
 
+<!-- Admin: edit friend/follower counts -->
+<div id="counts-modal" class="fixed inset-0 bg-black/75 z-[2000] hidden items-center justify-center p-4">
+  <div class="glass-panel rounded-3xl p-5 w-full max-w-sm">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="font-black text-sm"><i class="fa-solid fa-user-pen text-cyan-400 mr-1"></i>Chỉnh số hiển thị (Admin)</h3>
+      <button onclick="closeModal('counts-modal')" class="text-slate-400"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <p class="text-[11px] text-slate-500 mb-4">Số này chỉ thay đổi những gì <b>hiển thị</b> trên trang cá nhân — không ảnh hưởng tới danh sách bạn bè / người theo dõi thật.</p>
+    <label class="text-xs font-bold text-slate-400">Số bạn bè hiển thị</label>
+    <input id="counts-friend" type="number" min="0" class="input-field text-sm mb-1 mt-1" placeholder="Để trống = dùng số thật">
+    <p class="text-[10px] text-slate-600 mb-3">Số thật hiện tại: <span id="counts-friend-real"></span></p>
+    <label class="text-xs font-bold text-slate-400">Số người theo dõi hiển thị</label>
+    <input id="counts-follower" type="number" min="0" class="input-field text-sm mb-1 mt-1" placeholder="Để trống = dùng số thật">
+    <p class="text-[10px] text-slate-600 mb-4">Số thật hiện tại: <span id="counts-follower-real"></span></p>
+    <div class="flex gap-2">
+      <button onclick="resetCounts()" class="flex-1 py-2.5 rounded-xl bg-white/5 font-bold text-xs">Về số thật</button>
+      <button onclick="saveCounts()" class="flex-1 py-2.5 btn-primary text-xs">Lưu</button>
+    </div>
+  </div>
+</div>
+
 <script src="assets/js/particles.js?v=20260830"></script>
 <script src="assets/js/config.js?v=20260830"></script>
 <script src="assets/js/cursor.js?v=20260830"></script>
 <script src="assets/js/api.js?v=20260830"></script>
 <script src="assets/js/layout.js?v=20260830"></script>
 <script src="assets/js/video-autoplay.js?v=20260830"></script>
+<script src="assets/js/emoji-picker.js?v=20260830"></script>
+<script src="assets/js/feed.js?v=20260830"></script>
 <script>
   let profileUser = null, isOwn = false;
 
@@ -211,6 +240,9 @@
     document.getElementById('profile-name').innerHTML = `${escapeHtml(u.fullName || u.username)}${EduLayout.verifiedBadge(u)}`;
     document.getElementById('profile-meta').textContent = `@${u.username}`;
     document.getElementById('profile-friend-count').textContent = `${u.friendCount} bạn bè`;
+    document.getElementById('profile-follower-count').textContent = `${u.followerCount} người theo dõi`;
+    const me0 = EduAPI.getUser();
+    document.getElementById('counts-edit-btn').classList.toggle('hidden', me0.role !== 'admin');
     document.getElementById('profile-bio').textContent = u.bio || (isOwn ? 'Chưa có tiểu sử — nhấn "Chỉnh sửa trang cá nhân" để thêm.' : '');
     document.getElementById('about-role').querySelector('span').textContent = u.role === 'admin' ? 'Quản trị viên' : 'Người dùng';
     document.getElementById('about-joined').querySelector('span').textContent = 'Tham gia ' + new Date(u.createdAt).toLocaleDateString('vi-VN');
@@ -236,7 +268,7 @@
     } else cover.classList.add('hidden');
     document.getElementById('avatar-box').innerHTML = u.avatar
       ? `<img src="${EduAPI.fileUrl(u.avatar)}" onerror="this.onerror=null;this.src='assets/img/broken-image.svg'">`
-      : `<div class="avatar-initial">${initials(u.fullName || u.username)}</div>`;
+      : `<img src="assets/img/default-avatar.svg" class="w-full h-full rounded-full object-cover">`;
 
     if (isOwn) {
       document.getElementById('cover-edit-btn').classList.remove('hidden');
@@ -247,6 +279,11 @@
       if (u.verificationStatus === 'pending') {
         const vb = document.getElementById('verify-btn');
         vb.disabled = true; vb.innerHTML = '<i class="fa-solid fa-hourglass-half mr-1"></i>Đang chờ Admin duyệt';
+      }
+      if (u.verificationBlocked) {
+        const vb = document.getElementById('verify-btn');
+        vb.disabled = true; vb.className = 'text-xs px-3 py-2 rounded-xl bg-white/5 text-slate-500 cursor-not-allowed';
+        vb.innerHTML = '<i class="fa-solid fa-ban mr-1"></i>Không thể yêu cầu tích xanh';
       }
       document.getElementById('edit-fullname').value = u.fullName || '';
       document.getElementById('edit-email').value = u.email || '';
@@ -318,6 +355,36 @@
     } catch (err) { EduAPI.toast(err.message, 'error'); }
   }
 
+  function openCountsModal() {
+    document.getElementById('counts-friend-real').textContent = `${profileUser.friendCount}${profileUser.friendCountOverridden ? ' (đang chỉnh)' : ''}`;
+    document.getElementById('counts-follower-real').textContent = `${profileUser.followerCount}${profileUser.followerCountOverridden ? ' (đang chỉnh)' : ''}`;
+    document.getElementById('counts-friend').value = profileUser.friendCountOverridden ? profileUser.friendCount : '';
+    document.getElementById('counts-follower').value = profileUser.followerCountOverridden ? profileUser.followerCount : '';
+    openModal('counts-modal');
+  }
+  async function saveCounts() {
+    const fVal = document.getElementById('counts-friend').value;
+    const wVal = document.getElementById('counts-follower').value;
+    try {
+      const result = await EduAPI.request(`/api/users/${profileUser.id}/counts`, {
+        method: 'PUT',
+        body: { friendCount: fVal === '' ? null : Number(fVal), followerCount: wVal === '' ? null : Number(wVal) }
+      });
+      profileUser.friendCount = result.friendCount;
+      profileUser.followerCount = result.followerCount;
+      profileUser.friendCountOverridden = fVal !== '';
+      profileUser.followerCountOverridden = wVal !== '';
+      render();
+      closeModal('counts-modal');
+      EduAPI.toast('Đã cập nhật số hiển thị.', 'success');
+    } catch (err) { EduAPI.toast(err.message, 'error'); }
+  }
+  function resetCounts() {
+    document.getElementById('counts-friend').value = '';
+    document.getElementById('counts-follower').value = '';
+    saveCounts();
+  }
+
   async function requestVerification() {
     try {
       await EduAPI.request('/api/users/me/request-verification', { method: 'POST' });
@@ -351,7 +418,7 @@
     const { friends } = await EduAPI.request(`/api/friends/of/${profileUser.id}`);
     document.getElementById('profile-friends-grid').innerHTML = friends.map(u => `
       <a href="profile.html?id=${u.id}" class="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/5 hover:bg-white/10">
-        ${u.avatar ? `<img src="${EduAPI.fileUrl(u.avatar)}" class="w-16 h-16 rounded-full object-cover">` : `<div class="avatar-initial w-16 h-16 text-lg">${initials(u.fullName || u.username)}</div>`}
+        ${u.avatar ? `<img src="${EduAPI.fileUrl(u.avatar)}" class="w-16 h-16 rounded-full object-cover">` : `<img src="assets/img/default-avatar.svg" class="w-16 h-16 rounded-full object-cover">`}
         <span class="text-xs font-bold text-center truncate w-full flex items-center justify-center gap-1">${escapeHtml(u.fullName || u.username)}${EduLayout.verifiedBadge(u)}</span>
       </a>`).join('') || '<p class="text-xs text-slate-500 col-span-full">Chưa có bạn bè nào.</p>';
   }
@@ -427,6 +494,7 @@
     } catch (err) { EduAPI.toast(err.message, 'error'); }
   }
   initComposerListeners();
+  EduEmoji.attach(document.getElementById('composer-emoji-btn'), document.getElementById('post-content'));
 
   function switchTab(tab) {
     ['posts', 'photos', 'friends'].forEach(t => {
@@ -435,45 +503,14 @@
     });
   }
 
-  function gridClass(n) { return n === 1 ? 'g1' : n === 2 ? 'g2' : n === 3 ? 'g3' : 'g4'; }
-  function imagesGridHtml(urls) {
-    if (!urls.length) return '';
-    const shown = urls.slice(0, 4);
-    const extra = urls.length - 4;
-    return `<div class="img-grid ${gridClass(shown.length)} mb-2">${shown.map((u, i) => `
-      <div style="position:relative">
-        <img src="${u}" onerror="this.onerror=null;this.src='assets/img/broken-image.svg'">
-        ${i === 3 && extra > 0 ? `<div style="position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1.25rem">+${extra}</div>` : ''}
-      </div>`).join('')}</div>`;
-  }
-
   async function loadPosts() {
     const { posts } = await EduAPI.request(`/api/posts?authorId=${profileUser.id}`);
-    const me = EduAPI.getUser();
-    document.getElementById('profile-feed').innerHTML = posts.map(p => {
-      const imgs = (p.images && p.images.length ? p.images : (p.image ? [p.image] : [])).map(EduAPI.fileUrl);
-      return `
-      <div class="glass-panel p-4 rounded-3xl mb-4">
-        <div class="flex items-center justify-between mb-2">
-          <p class="text-[10px] text-slate-500">${new Date(p.createdAt).toLocaleString('vi-VN')}</p>
-          ${(p.author && p.author.id === me.id) || me.role === 'admin' ? `<button onclick="deletePost('${p.id}')" class="text-rose-400 text-xs"><i class="fa-solid fa-trash"></i></button>` : ''}
-        </div>
-        <p class="text-sm mb-2 whitespace-pre-wrap">${escapeHtml(p.content)}</p>
-        ${imagesGridHtml(imgs)}
-        ${p.video ? EduVideo.renderVideoBlock(EduAPI.fileUrl(p.video), { extraClass: 'max-h-[420px]' }) : ''}
-        <div class="flex items-center gap-4 text-xs text-slate-400 border-t border-white/5 pt-2">
-          <button onclick="likePost('${p.id}')" class="hover:text-pink-400"><i class="fa-solid fa-heart mr-1"></i>${p.likeCount} Thích</button>
-          <span><i class="fa-solid fa-comment mr-1"></i>${p.commentCount} Bình luận</span>
-        </div>
-      </div>`;
-    }).join('') || '<p class="text-slate-500 text-sm glass-panel p-4 rounded-3xl">Chưa có bài viết nào.</p>';
-    EduVideo.observeAll(document.getElementById('profile-feed'));
+    EduFeed.renderList(document.getElementById('profile-feed'), posts, { showAuthor: false });
 
     const allImgs = posts.flatMap(p => (p.images && p.images.length ? p.images : (p.image ? [p.image] : []))).map(EduAPI.fileUrl);
     document.getElementById('photos-grid').innerHTML = allImgs.map(u => `<img src="${u}" onerror="this.onerror=null;this.src='assets/img/broken-image.svg'">`).join('') || '<p class="text-slate-500 text-sm col-span-full">Chưa có ảnh nào.</p>';
   }
-  async function likePost(id) { await EduAPI.request(`/api/posts/${id}/like`, { method: 'POST' }); loadPosts(); }
-  async function deletePost(id) { if (!confirm('Xoá bài viết này?')) return; await EduAPI.request(`/api/posts/${id}`, { method: 'DELETE' }); loadPosts(); }
+  EduFeed.setReloadCallback(loadPosts);
 </script>
 </body>
 </html>

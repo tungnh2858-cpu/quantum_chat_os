@@ -39,7 +39,7 @@ const EduLayout = (() => {
   function avatarHtml(user, size) {
     return user.avatar
       ? `<img src="${EduAPI.fileUrl(user.avatar)}" class="w-${size} h-${size} rounded-full object-cover">`
-      : `<div class="avatar-initial w-${size} h-${size} text-xs">${initials(user.fullName || user.username)}</div>`;
+      : `<img src="assets/img/default-avatar.svg" class="w-${size} h-${size} rounded-full object-cover">`;
   }
 
   function render(activeId) {

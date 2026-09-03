@@ -33,6 +33,9 @@ function defaultDB() {
         website: '',         // contact link (Instagram, website, ...)
         verified: true,      // blue check — admin is verified by default
         verificationStatus: 'approved', // none | pending | approved | rejected
+        verificationBlocked: false, // admin can stop this account from ever requesting the blue check
+        friendCountOverride: null,   // admin can force a custom "friend count" shown on the profile
+        followerCountOverride: null, // admin can force a custom "follower count" shown on the profile
         friends: [],
         following: [],
         theme: 'dark',
@@ -88,6 +91,9 @@ function migrate(db) {
     if (u.website === undefined) u.website = '';
     if (u.verified === undefined) u.verified = u.id === 'ADMIN1';
     if (u.verificationStatus === undefined) u.verificationStatus = u.verified ? 'approved' : 'none';
+    if (u.verificationBlocked === undefined) u.verificationBlocked = false;
+    if (u.friendCountOverride === undefined) u.friendCountOverride = null;
+    if (u.followerCountOverride === undefined) u.followerCountOverride = null;
     if (!Array.isArray(u.friends)) u.friends = [];
     if (!Array.isArray(u.following)) u.following = [];
     if (u.lastBirthdayNotifiedYear === undefined) u.lastBirthdayNotifiedYear = null;
@@ -96,6 +102,15 @@ function migrate(db) {
   db.posts.forEach(p => {
     if (!Array.isArray(p.images)) p.images = p.image ? [p.image] : [];
     if (p.video === undefined) p.video = '';
+    if (p.edited === undefined) p.edited = false;
+    if (p.editedAt === undefined) p.editedAt = null;
+    (p.comments || []).forEach(c => {
+      if (c.parentId === undefined) c.parentId = null;
+      if (!Array.isArray(c.likes)) c.likes = [];
+      if (c.edited === undefined) c.edited = false;
+      if (c.editedAt === undefined) c.editedAt = null;
+      if (c.deleted === undefined) c.deleted = false;
+    });
   });
   db.messages.forEach(m => {
     if (m.image === undefined) m.image = '';
