@@ -24,12 +24,12 @@ function defaultDB() {
         fullName: 'Quantum Chat OS Admin',
         email: 'tung123t8@gmail.com',
         phone: '0389175548',
-        avatar: '',
+        avatar: '/assets/img/quantum-chat-logo.svg',
         coverImage: '',
         bio: 'Quản trị viên hệ thống Quantum Chat OS',
         birthday: '',        // 'YYYY-MM-DD'
         location: '',        // "Lives in ..."
-        education: '',       // school / university name
+        education: [],       // [{ id, level: 'Cấp 1'|'Cấp 2'|'Cấp 3'|'Đại học'|custom, school }]
         website: '',         // contact link (Instagram, website, ...)
         verified: true,      // blue check — admin is verified by default
         verificationStatus: 'approved', // none | pending | approved | rejected
@@ -50,12 +50,14 @@ function defaultDB() {
     posts: [],
     stories: [],
     reels: [],
+    pages: [],             // Fanpages: { id, ownerId, name, avatar, coverImage, bio, category, followers: [], createdAt }
     messages: [],
     friendRequests: [],   // { id, fromId, toId, status: 'pending'|'accepted'|'rejected'|'cancelled', createdAt }
     notifications: [],    // { id, userId, type, actorId, data, read, createdAt }
     verificationRequests: [], // { id, userId, status: 'pending'|'approved'|'rejected', createdAt }
     adminSettings: {
-      requireApproval: false // if true, new sign-ups sit in pendingUsers until an admin approves them
+      requireApproval: false, // if true, new sign-ups sit in pendingUsers until an admin approves them
+      autoRejectVerification: false // if true, any new blue-check request is instantly auto-rejected
     }
   };
 }
@@ -73,13 +75,15 @@ function migrate(db) {
   if (!Array.isArray(db.posts)) db.posts = [];
   if (!Array.isArray(db.stories)) db.stories = [];
   if (!Array.isArray(db.reels)) db.reels = [];
+  if (!Array.isArray(db.pages)) db.pages = [];
   if (!Array.isArray(db.messages)) db.messages = [];
   if (!Array.isArray(db.pendingUsers)) db.pendingUsers = [];
   if (!Array.isArray(db.friendRequests)) db.friendRequests = [];
   if (!Array.isArray(db.notifications)) db.notifications = [];
   if (!Array.isArray(db.verificationRequests)) db.verificationRequests = [];
-  if (!db.adminSettings) db.adminSettings = { requireApproval: false };
+  if (!db.adminSettings) db.adminSettings = { requireApproval: false, autoRejectVerification: false };
   if (db.adminSettings.requireApproval === undefined) db.adminSettings.requireApproval = false;
+  if (db.adminSettings.autoRejectVerification === undefined) db.adminSettings.autoRejectVerification = false;
 
   db.users.forEach(u => {
     if (u.coverImage === undefined) u.coverImage = '';
@@ -87,7 +91,11 @@ function migrate(db) {
     if (u.phone === undefined) u.phone = '';
     if (u.birthday === undefined) u.birthday = '';
     if (u.location === undefined) u.location = '';
-    if (u.education === undefined) u.education = '';
+    if (!Array.isArray(u.education)) {
+      u.education = (typeof u.education === 'string' && u.education.trim())
+        ? [{ id: uuid(), level: 'Đại học', school: u.education.trim() }]
+        : [];
+    }
     if (u.website === undefined) u.website = '';
     if (u.verified === undefined) u.verified = u.id === 'ADMIN1';
     if (u.verificationStatus === undefined) u.verificationStatus = u.verified ? 'approved' : 'none';
@@ -115,6 +123,13 @@ function migrate(db) {
   db.messages.forEach(m => {
     if (m.image === undefined) m.image = '';
     if (m.deleted === undefined) m.deleted = false;
+  });
+  db.stories.forEach(s => {
+    if (s.background === undefined) s.background = '';
+    if (s.privacy === undefined) s.privacy = 'public';
+  });
+  db.posts.forEach(p => {
+    if (p.pageId === undefined) p.pageId = null;
   });
   return db;
 }

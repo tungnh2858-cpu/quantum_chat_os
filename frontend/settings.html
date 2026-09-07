@@ -64,7 +64,8 @@
       <label class="text-xs font-bold text-slate-400">Sống tại</label>
       <input id="s-location" class="input-field text-sm mt-1 mb-3" placeholder="VD: Hà Nội, Việt Nam">
       <label class="text-xs font-bold text-slate-400">Học vấn</label>
-      <input id="s-education" class="input-field text-sm mt-1 mb-3" placeholder="Tên trường">
+      <div id="s-education-list" class="space-y-2 mt-1 mb-2"></div>
+      <button type="button" onclick="addEducationRow()" class="text-xs text-cyan-400 hover:underline mb-3"><i class="fa-solid fa-plus mr-1"></i>Thêm học vấn</button>
       <label class="text-xs font-bold text-slate-400">Website / liên hệ khác</label>
       <input id="s-website" class="input-field text-sm mt-1 mb-4" placeholder="VD: instagram.com/...">
       <button onclick="savePersonalInfo()" class="btn-primary text-sm w-full">Lưu Thông Tin</button>
@@ -120,6 +121,7 @@
 <script src="assets/js/cursor.js?v=20260830"></script>
 <script src="assets/js/api.js?v=20260830"></script>
 <script src="assets/js/layout.js?v=20260830"></script>
+<script src="assets/js/image-cropper.js?v=20260903"></script>
 <script>
   if (EduLayout.guard('settings')) { populateBirthdaySelects(); fillForm(); }
   EduAPI.enablePasswordToggle('s-current-pw');
@@ -156,7 +158,7 @@
     document.getElementById('s-2fa').checked = !!(u.security && u.security.requireLoginOtp);
     document.getElementById('s-login-email').checked = !!(u.security && u.security.emailOnLogin);
     document.getElementById('s-location').value = u.location || '';
-    document.getElementById('s-education').value = u.education || '';
+    renderEducationRows(u.education || []);
     document.getElementById('s-website').value = u.website || '';
     if (u.birthday) {
       const [y, m, d] = u.birthday.split('-');
@@ -189,7 +191,7 @@
       const { user } = await EduAPI.request('/api/users/me/profile', { method: 'PUT', body: {
         birthday,
         location: document.getElementById('s-location').value,
-        education: document.getElementById('s-education').value,
+        education: collectEducationRows(),
         website: document.getElementById('s-website').value
       }});
       EduAPI.setUser(user);
@@ -221,15 +223,44 @@
     } catch (err) { EduAPI.toast(err.message, 'error'); }
   }
 
+  const EDU_LEVELS = ['Cấp 1', 'Cấp 2', 'Cấp 3', 'Đại học', 'Sau đại học', 'Khác'];
+  function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+  function educationRowHtml(entry) {
+    entry = entry || { level: 'Cấp 1', school: '' };
+    return `
+    <div class="flex gap-2 edu-row">
+      <select class="select-field text-xs !py-2 !px-2 w-28 flex-shrink-0 edu-level">
+        ${EDU_LEVELS.map(l => `<option value="${l}" ${entry.level === l ? 'selected' : ''}>${l}</option>`).join('')}
+      </select>
+      <input class="input-field text-xs flex-1 edu-school" placeholder="Tên trường" value="${escapeHtml(entry.school || '')}">
+      <button type="button" onclick="this.closest('.edu-row').remove()" class="text-rose-400 hover:text-rose-300 w-8 flex-shrink-0"><i class="fa-solid fa-xmark"></i></button>
+    </div>`;
+  }
+  function renderEducationRows(list) {
+    document.getElementById('s-education-list').innerHTML = (list || []).map(educationRowHtml).join('');
+  }
+  function addEducationRow() {
+    document.getElementById('s-education-list').insertAdjacentHTML('beforeend', educationRowHtml());
+  }
+  function collectEducationRows() {
+    return Array.from(document.querySelectorAll('#s-education-list .edu-row')).map(row => ({
+      level: row.querySelector('.edu-level').value,
+      school: row.querySelector('.edu-school').value.trim()
+    })).filter(e => e.school);
+  }
+
   async function uploadAvatar(input) {
     const file = input.files[0]; if (!file) return;
-    const fd = new FormData(); fd.append('avatar', file);
-    try {
-      const { user } = await EduAPI.request('/api/users/me/avatar', { method: 'POST', body: fd, isForm: true });
-      EduAPI.setUser(user);
-      document.getElementById('avatar-preview').src = EduAPI.fileUrl(user.avatar);
-      EduAPI.toast('Đã cập nhật ảnh đại diện.', 'success');
-    } catch (err) { EduAPI.toast(err.message, 'error'); }
+    input.value = '';
+    EduCropper.open(file, { aspect: 1, shape: 'circle', outputSize: 512, title: 'Chỉnh ảnh đại diện' }, async blob => {
+      const fd = new FormData(); fd.append('avatar', blob, 'avatar.jpg');
+      try {
+        const { user } = await EduAPI.request('/api/users/me/avatar', { method: 'POST', body: fd, isForm: true });
+        EduAPI.setUser(user);
+        document.getElementById('avatar-preview').src = EduAPI.fileUrl(user.avatar);
+        EduAPI.toast('Đã cập nhật ảnh đại diện.', 'success');
+      } catch (err) { EduAPI.toast(err.message, 'error'); }
+    });
   }
 
   async function setTheme(theme) {

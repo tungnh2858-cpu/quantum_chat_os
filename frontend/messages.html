@@ -37,7 +37,16 @@
     <div id="convo-panel" class="w-full lg:w-80 flex-shrink-0 glass-panel rounded-3xl p-3 flex flex-col overflow-hidden">
       <div class="flex items-center justify-between px-2 py-2">
         <h2 class="font-black text-lg"><i class="fa-solid fa-comment-dots text-cyan-400 mr-2"></i>Tin Nhắn</h2>
-        <a href="social.html" class="lg:hidden text-slate-400"><i class="fa-solid fa-arrow-left"></i></a>
+        <div class="flex items-center gap-2">
+          <button id="new-msg-btn" onclick="toggleNewMsgPopup()" class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-cyan-300" title="Tin nhắn mới"><i class="fa-solid fa-pen-to-square"></i></button>
+          <a href="social.html" class="lg:hidden text-slate-400"><i class="fa-solid fa-arrow-left"></i></a>
+        </div>
+      </div>
+      <div id="new-msg-popup-backdrop" class="hidden fixed inset-0 z-[1900]" onclick="toggleNewMsgPopup()"></div>
+      <div id="new-msg-popup" class="hidden fixed z-[1950] w-72 glass-panel rounded-2xl p-3 shadow-2xl" style="top:100px;right:16px">
+        <p class="text-[11px] font-bold text-slate-400 uppercase mb-2 px-1">Nhắn tin cho bạn bè</p>
+        <input id="new-msg-search" class="input-field text-xs mb-2" placeholder="Tìm bạn bè..." oninput="renderNewMsgFriends(this.value)">
+        <div id="new-msg-friend-list" class="max-h-64 overflow-y-auto space-y-1"></div>
       </div>
       <div class="relative px-2 mb-2">
         <input id="convo-search" class="input-field text-xs !pl-8" placeholder="Tìm cuộc trò chuyện...">
@@ -98,11 +107,13 @@
   let typingTimeout = null;
   let sendTypingThrottle = 0;
   let imageAttachFile = null;
+  let myFriendsCache = [];
 
   if (EduLayout.guard('messages')) {
     loadConversations();
     connectSocket();
     EduEmoji.attach(document.getElementById('chat-emoji-btn'), document.getElementById('chat-input'));
+    EduAPI.request('/api/friends').then(r => { myFriendsCache = r.friends; }).catch(() => {});
     const withId = new URLSearchParams(location.search).get('with');
     if (withId) {
       openThread(withId);
@@ -150,6 +161,28 @@
       </div>`).join('') || '<p class="text-xs text-slate-500 p-3">Chưa có cuộc trò chuyện nào. Vào trang Bạn Bè và bấm biểu tượng nhắn tin để bắt đầu!</p>';
   }
   document.getElementById('convo-search').addEventListener('input', e => renderConvoList(e.target.value));
+
+  function toggleNewMsgPopup() {
+    const popup = document.getElementById('new-msg-popup');
+    const backdrop = document.getElementById('new-msg-popup-backdrop');
+    const opening = popup.classList.contains('hidden');
+    popup.classList.toggle('hidden', !opening);
+    backdrop.classList.toggle('hidden', !opening);
+    if (opening) {
+      document.getElementById('new-msg-search').value = '';
+      renderNewMsgFriends('');
+      document.getElementById('new-msg-search').focus();
+    }
+  }
+  function renderNewMsgFriends(filter) {
+    const q = (filter || '').toLowerCase();
+    const list = myFriendsCache.filter(f => !q || (f.fullName || f.username || '').toLowerCase().includes(q));
+    document.getElementById('new-msg-friend-list').innerHTML = list.map(f => `
+      <button onclick="toggleNewMsgPopup(); openThread('${f.id}')" class="w-full flex items-center gap-2 p-2 rounded-xl hover:bg-white/5 text-left">
+        ${avatarHtml(f, 8)}
+        <span class="text-xs font-bold truncate flex-1">${escapeHtml(f.fullName || f.username)}${EduLayout.verifiedBadge(f)}</span>
+      </button>`).join('') || '<p class="text-xs text-slate-500 p-2">Không tìm thấy bạn bè phù hợp.</p>';
+  }
 
   function backToList() {
     document.getElementById('thread-panel').classList.add('hidden');

@@ -83,7 +83,7 @@ router.get('/:id', requireAuth, (req, res) => {
     user: {
       id: user.id, username: user.username, fullName: user.fullName,
       avatar: user.avatar, coverImage: user.coverImage || '', bio: user.bio || '',
-      birthday: user.birthday || '', location: user.location || '', education: user.education || '', website: user.website || '',
+      birthday: user.birthday || '', location: user.location || '', education: user.education || [], website: user.website || '',
       role: user.role, verified: !!user.verified, verificationStatus: user.verificationStatus, verificationBlocked: !!user.verificationBlocked,
       friendCount: displayFriendCount(user),
       followerCount: displayFollowerCount(db, user),
@@ -122,7 +122,7 @@ router.post('/', requireAuth, requireAdmin, uploadAvatar.single('avatar'), (req,
     avatar: req.file ? `/uploads/avatars/${req.file.filename}` : '',
     coverImage: '',
     bio: '',
-    birthday: '', location: '', education: '', website: '',
+    birthday: '', location: '', education: [], website: '',
     verified: finalVerified, verificationStatus: finalVerified ? 'approved' : 'none', verificationBlocked: false,
     friendCountOverride: null, followerCountOverride: null,
     friends: [], following: [],
@@ -251,7 +251,12 @@ router.put('/me/profile', requireAuth, (req, res) => {
   if (bio !== undefined) user.bio = bio;
   if (birthday !== undefined) user.birthday = birthday;
   if (location !== undefined) user.location = location;
-  if (education !== undefined) user.education = education;
+  if (education !== undefined && Array.isArray(education)) {
+    user.education = education
+      .filter(e => e && (e.school || '').trim())
+      .slice(0, 10)
+      .map(e => ({ id: e.id || uuid(), level: (e.level || '').trim() || 'Khác', school: (e.school || '').trim() }));
+  }
   if (website !== undefined) user.website = website;
   saveDB(db);
   res.json({ user: sanitize(user) });
@@ -265,6 +270,12 @@ router.post('/me/request-verification', requireAuth, (req, res) => {
   if (user.verificationBlocked) return res.status(403).json({ error: 'Tài khoản của bạn không được phép gửi yêu cầu tích xanh. Liên hệ Admin nếu có thắc mắc.' });
   const already = db.verificationRequests.find(r => r.userId === user.id && r.status === 'pending');
   if (already) return res.status(409).json({ error: 'Bạn đã gửi yêu cầu, vui lòng chờ Admin duyệt.' });
+  if (db.adminSettings.autoRejectVerification) {
+    db.verificationRequests.push({ id: uuid(), userId: user.id, status: 'rejected', createdAt: new Date().toISOString() });
+    user.verificationStatus = 'rejected';
+    saveDB(db);
+    return res.status(403).json({ error: 'Hệ thống hiện không nhận yêu cầu tích xanh mới. Vui lòng thử lại sau.' });
+  }
   db.verificationRequests.push({ id: uuid(), userId: user.id, status: 'pending', createdAt: new Date().toISOString() });
   user.verificationStatus = 'pending';
   saveDB(db);

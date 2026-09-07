@@ -44,20 +44,43 @@ function commentView(db, c) {
 }
 
 function withAuthor(db, post) {
+  // Posts made "as a Page" show the Page's identity in the author slot, so the
+  // existing feed/profile rendering (which expects post.author.avatar/fullName) works unchanged.
+  let author = authorCard(db, post.authorId);
+  let isPage = false;
+  if (post.pageId) {
+    const page = db.pages.find(pg => pg.id === post.pageId);
+    if (page) {
+      author = { id: page.id, username: page.name, fullName: page.name, avatar: page.avatar, role: 'page', verified: false };
+      isPage = true;
+    }
+  }
   return {
     ...post,
-    author: authorCard(db, post.authorId),
+    author, isPage,
     likeCount: post.likes.length,
     commentCount: post.comments.filter(c => !c.deleted).length,
     comments: post.comments.map(c => commentView(db, c))
   };
 }
 
+// Can this user edit/delete this post? (post owner, page owner if posted as a page, or admin)
+function canModeratePost(db, post, user) {
+  if (user.role === 'admin') return true;
+  if (post.authorId === user.id) return true;
+  if (post.pageId) {
+    const page = db.pages.find(pg => pg.id === post.pageId);
+    if (page && page.ownerId === user.id) return true;
+  }
+  return false;
+}
+
 // GET /api/posts  (news feed, newest first) — optional ?authorId= to filter for a profile page
 router.get('/', requireAuth, requireTool('social'), (req, res) => {
   const db = getDB();
   let feed = [...db.posts];
-  if (req.query.authorId) feed = feed.filter(p => p.authorId === req.query.authorId);
+  if (req.query.authorId) feed = feed.filter(p => p.authorId === req.query.authorId && !p.pageId);
+  if (req.query.pageId) feed = feed.filter(p => p.pageId === req.query.pageId);
   feed = feed.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map(p => withAuthor(db, p));
   res.json({ posts: feed });
 });
@@ -66,16 +89,24 @@ router.get('/', requireAuth, requireTool('social'), (req, res) => {
 router.post('/', requireAuth, requireTool('social'), (req, res) => {
   uploadPostMedia(req, res, err => {
     if (err) return res.status(400).json({ error: err.message });
-    const { content, privacy } = req.body || {};
+    const { content, privacy, pageId } = req.body || {};
     const files = req.files || {};
     const images = (files.images || []).map(f => `/uploads/posts/${f.filename}`);
     const video = files.video && files.video[0] ? `/uploads/videos/${files.video[0].filename}` : '';
     if (!content && !images.length && !video) return res.status(400).json({ error: 'Bài viết trống.' });
 
     const db = getDB();
+    let finalPageId = null;
+    if (pageId) {
+      const page = db.pages.find(pg => pg.id === pageId);
+      if (!page) return res.status(404).json({ error: 'Không tìm thấy Trang.' });
+      if (page.ownerId !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ error: 'Bạn không quản lý Trang này.' });
+      finalPageId = page.id;
+    }
     const post = {
       id: uuid(),
       authorId: req.user.id,
+      pageId: finalPageId,
       content: content || '',
       images,
       video,
@@ -98,7 +129,7 @@ router.put('/:id', requireAuth, requireTool('social'), (req, res) => {
   const db = getDB();
   const post = db.posts.find(p => p.id === req.params.id);
   if (!post) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
-  if (post.authorId !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ error: 'Không đủ quyền.' });
+  if (!canModeratePost(db, post, req.user)) return res.status(403).json({ error: 'Không đủ quyền.' });
   if (content !== undefined) {
     if (!content.trim() && !post.images.length && !post.video) return res.status(400).json({ error: 'Bài viết không thể để trống.' });
     post.content = content;
@@ -115,7 +146,7 @@ router.delete('/:id', requireAuth, requireTool('social'), (req, res) => {
   const db = getDB();
   const post = db.posts.find(p => p.id === req.params.id);
   if (!post) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
-  if (post.authorId !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ error: 'Không đủ quyền.' });
+  if (!canModeratePost(db, post, req.user)) return res.status(403).json({ error: 'Không đủ quyền.' });
   db.posts = db.posts.filter(p => p.id !== req.params.id);
   saveDB(db);
   res.json({ ok: true });

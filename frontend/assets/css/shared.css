@@ -9,15 +9,15 @@
   --edu-field-border: rgba(255,255,255,.1);
 }
 html[data-theme="light"] {
-  --edu-bg: #eef1fb;
-  --edu-panel: rgba(255, 255, 255, 0.85);
-  --edu-panel-border: rgba(15, 10, 35, 0.08);
+  --edu-bg: #d9dbe0;
+  --edu-panel: rgba(255, 255, 255, 0.9);
+  --edu-panel-border: rgba(15, 10, 35, 0.1);
   --edu-text: #16132b;
   --edu-text-dim: #5b5878;
-  --edu-field-bg: rgba(15,10,35,.04);
-  --edu-field-border: rgba(15,10,35,.12);
+  --edu-field-bg: rgba(15,10,35,.05);
+  --edu-field-border: rgba(15,10,35,.14);
 }
-html[data-theme="light"] body { background: var(--edu-bg); color: var(--edu-text); }
+html[data-theme="light"] body, html[data-theme="light"] .bg-brand-950 { background: var(--edu-bg) !important; color: var(--edu-text); }
 html[data-theme="light"] .text-slate-100, html[data-theme="light"] .text-slate-200, html[data-theme="light"] .text-slate-300 { color: var(--edu-text) !important; }
 html[data-theme="light"] .text-slate-400, html[data-theme="light"] .text-slate-500 { color: var(--edu-text-dim) !important; }
 html[data-theme="light"] .bg-white\/5, html[data-theme="light"] .bg-white\/10 { background: rgba(15,10,35,.05) !important; }
@@ -77,6 +77,17 @@ select.input-field option, select.select-field option { background: #12102a; col
 /* ---- Fullscreen animated particle-constellation background ---- */
 /* Page content already sits on "relative z-10" wrappers, so this just needs to stay behind at z-0. */
 #edu-particles-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .55; }
+
+/* ---- Image cropper (avatar/cover drag+zoom) ---- */
+.edu-crop-modal { position: fixed; inset: 0; background: rgba(0,0,0,.8); z-index: 4000; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.edu-crop-box { background: var(--edu-panel-bg, #14101f); border: 1px solid var(--edu-panel-border, rgba(255,255,255,.1)); border-radius: 1.5rem; padding: 1.25rem; width: 100%; max-width: 440px; }
+.edu-crop-title { font-weight: 800; font-size: .9rem; margin-bottom: .75rem; }
+.edu-crop-viewport { position: relative; width: 100%; overflow: hidden; border-radius: .75rem; background: #000; cursor: grab; touch-action: none; }
+.edu-crop-viewport:active { cursor: grabbing; }
+.edu-crop-img { position: absolute; top: 0; left: 0; max-width: none; user-select: none; pointer-events: none; }
+.edu-crop-frame { position: absolute; inset: 0; border: 2px solid rgba(255,255,255,.85); border-radius: .75rem; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0,0,0,.35); }
+.edu-crop-frame-circle { border-radius: 9999px; margin: 8%; box-shadow: 0 0 0 9999px rgba(0,0,0,.55); }
+.edu-crop-zoom { accent-color: #00c8ff; }
 
 /* ---- Emoji picker popup ---- */
 .edu-emoji-popup {

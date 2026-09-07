@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trang (Fanpage) — Quantum Chat OS</title>
+<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#06040d">
+<link rel="icon" type="image/svg+xml" href="assets/img/quantum-chat-logo.svg"><link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<link rel="stylesheet" href="assets/css/tailwind.built.css?v=20260903">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="assets/css/shared.css?v=20260903">
+<style>
+  .cover-wrap{position:relative;height:220px;border-radius:1.5rem;overflow:hidden;background:linear-gradient(120deg,#3b82f6,#8b5cf6,#ec4899,#f59e0b)}
+  .cover-wrap img{width:100%;height:100%;object-fit:cover}
+  .page-card{display:flex;align-items:center;gap:.75rem;padding:.75rem;border-radius:1rem;background:rgba(255,255,255,.04)}
+</style>
+</head>
+<body class="bg-brand-950 text-slate-100 font-sans min-h-screen relative overflow-x-hidden">
+<div id="toast-notif-box" class="fixed top-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
+<div class="flex h-screen relative z-10 overflow-hidden">
+  <aside id="sidebar-slot"></aside>
+  <main class="flex-1 flex flex-col overflow-y-auto p-4 lg:p-6">
+    <header class="flex items-center justify-between mb-6 glass-panel p-4 rounded-3xl shadow-xl flex-wrap gap-3">
+      <div class="flex items-center gap-4">
+        <button class="lg:hidden p-3 rounded-2xl bg-white/5" onclick="document.getElementById('mobile-drawer').classList.toggle('hidden')"><i class="fa-solid fa-bars"></i></button>
+        <h2 class="text-xl lg:text-2xl font-black"><i class="fa-solid fa-flag text-amber-400 mr-2"></i>Trang (Fanpage)</h2>
+      </div>
+      <button onclick="openModal('create-page-modal')" class="btn-primary text-xs"><i class="fa-solid fa-plus mr-1"></i>Tạo Trang mới</button>
+    </header>
+    <div id="mobile-drawer" class="hidden lg:hidden glass-panel rounded-3xl mb-4"><div id="mobile-nav-slot"></div></div>
+
+    <div id="pages-list-view">
+      <div class="relative mb-4 max-w-md">
+        <input id="page-search" class="input-field text-sm !pl-9" placeholder="Tìm Trang..." oninput="loadPages(this.value)">
+        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+      </div>
+      <div id="my-pages-section" class="mb-6">
+        <h3 class="text-xs font-black text-slate-400 uppercase mb-2">Trang của tôi</h3>
+        <div id="my-pages-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+      </div>
+      <h3 class="text-xs font-black text-slate-400 uppercase mb-2">Khám phá</h3>
+      <div id="all-pages-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+    </div>
+
+    <div id="page-profile-view" class="hidden">
+      <button onclick="backToPagesList()" class="text-slate-400 hover:text-white text-sm mb-4"><i class="fa-solid fa-arrow-left mr-2"></i>Về danh sách Trang</button>
+      <div class="glass-panel rounded-3xl p-4 mb-6">
+        <div class="cover-wrap">
+          <img id="page-cover-img" class="hidden">
+          <button id="page-cover-edit-btn" class="hidden absolute bottom-3 right-3 btn-primary text-xs" onclick="document.getElementById('page-cover-input').click()"><i class="fa-solid fa-camera mr-1"></i>Đổi ảnh bìa</button>
+          <input type="file" id="page-cover-input" accept="image/*" class="hidden">
+        </div>
+        <div class="flex flex-wrap items-end justify-between gap-3 px-2 mt-[-40px]">
+          <div class="flex items-end gap-4">
+            <div class="relative flex-shrink-0">
+              <img id="page-avatar-img" class="w-24 h-24 rounded-2xl object-cover border-4 border-brand-950 bg-white/10">
+              <button id="page-avatar-edit-btn" class="hidden absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-cyan-500 text-white flex items-center justify-center" onclick="document.getElementById('page-avatar-input').click()"><i class="fa-solid fa-camera text-xs"></i></button>
+              <input type="file" id="page-avatar-input" accept="image/*" class="hidden">
+            </div>
+            <div class="pb-2">
+              <h1 id="page-name" class="text-xl font-black"></h1>
+              <p id="page-meta" class="text-xs text-slate-400"></p>
+            </div>
+          </div>
+          <div class="pb-2 flex gap-2">
+            <button id="page-follow-btn" onclick="togglePageFollow()" class="btn-primary text-xs"></button>
+            <button id="page-delete-btn" onclick="deleteCurrentPage()" class="hidden text-xs px-3 py-2 rounded-xl bg-rose-500/20 text-rose-300"><i class="fa-solid fa-trash mr-1"></i>Xoá Trang</button>
+          </div>
+        </div>
+        <p id="page-bio" class="px-2 mt-3 text-sm text-slate-300"></p>
+      </div>
+
+      <div id="page-composer" class="hidden glass-panel p-4 rounded-3xl mb-4">
+        <textarea id="page-post-content" class="input-field" rows="3" placeholder="Đăng bài với tư cách Trang..."></textarea>
+        <div id="page-compose-thumbs" class="flex gap-2 overflow-x-auto mt-3"></div>
+        <div class="flex items-center justify-between mt-3">
+          <label class="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center cursor-pointer text-emerald-400" title="Thêm ảnh">
+            <i class="fa-solid fa-images"></i>
+            <input type="file" id="page-post-images" accept="image/*" multiple class="hidden">
+          </label>
+          <button onclick="createPagePost()" class="btn-primary text-xs"><i class="fa-solid fa-paper-plane mr-1"></i>Đăng</button>
+        </div>
+      </div>
+
+      <div id="page-feed"></div>
+    </div>
+  </main>
+</div>
+
+<div id="create-page-modal" class="fixed inset-0 bg-black/75 z-[2000] hidden items-center justify-center p-4">
+  <div class="glass-panel rounded-3xl p-5 w-full max-w-sm">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="font-black text-sm"><i class="fa-solid fa-flag text-amber-400 mr-1"></i>Tạo Trang Mới</h3>
+      <button onclick="closeModal('create-page-modal')" class="text-slate-400"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <label class="text-xs font-bold text-slate-400">Tên Trang</label>
+    <input id="cp-name" class="input-field text-sm mb-3 mt-1" placeholder="VD: Quán Cafe ABC">
+    <label class="text-xs font-bold text-slate-400">Danh mục</label>
+    <input id="cp-category" class="input-field text-sm mb-3 mt-1" placeholder="VD: Ẩm thực, Công nghệ, Nghệ thuật...">
+    <label class="text-xs font-bold text-slate-400">Giới thiệu</label>
+    <textarea id="cp-bio" class="input-field text-sm mb-4 mt-1" rows="2" placeholder="Giới thiệu ngắn về Trang"></textarea>
+    <button onclick="submitCreatePage()" class="btn-primary w-full text-xs">Tạo Trang</button>
+  </div>
+</div>
+
+<script src="assets/js/particles.js?v=20260903"></script>
+<script src="assets/js/config.js?v=20260903"></script>
+<script src="assets/js/cursor.js?v=20260903"></script>
+<script src="assets/js/api.js?v=20260903"></script>
+<script src="assets/js/layout.js?v=20260903"></script>
+<script src="assets/js/video-autoplay.js?v=20260903"></script>
+<script src="assets/js/emoji-picker.js?v=20260903"></script>
+<script src="assets/js/feed.js?v=20260903"></script>
+<script src="assets/js/image-cropper.js?v=20260903"></script>
+<script>
+  let currentPage = null;
+  let pageComposeFiles = [];
+
+  if (EduLayout.guard('pages')) {
+    loadMyPages();
+    loadPages();
+    const pid = new URLSearchParams(location.search).get('id');
+    if (pid) openPage(pid);
+  }
+
+  function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+  function openModal(id) { const el = document.getElementById(id); el.classList.remove('hidden'); el.classList.add('flex'); }
+  function closeModal(id) { const el = document.getElementById(id); el.classList.add('hidden'); el.classList.remove('flex'); }
+
+  function pageCardHtml(p) {
+    return `
+    <a href="pages.html?id=${p.id}" class="page-card hover:bg-white/8">
+      ${p.avatar ? `<img src="${EduAPI.fileUrl(p.avatar)}" class="w-12 h-12 rounded-xl object-cover flex-shrink-0">` : `<div class="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-flag text-amber-400"></i></div>`}
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-bold truncate">${escapeHtml(p.name)}</p>
+        <p class="text-[11px] text-slate-500 truncate">${escapeHtml(p.category)} · ${p.followerCount} người theo dõi</p>
+      </div>
+    </a>`;
+  }
+
+  async function loadMyPages() {
+    const { pages } = await EduAPI.request('/api/pages/mine');
+    document.getElementById('my-pages-list').innerHTML = pages.map(pageCardHtml).join('') || '<p class="text-xs text-slate-500 col-span-full">Bạn chưa quản lý Trang nào. Bấm "Tạo Trang mới" để bắt đầu!</p>';
+  }
+  async function loadPages(q) {
+    const { pages } = await EduAPI.request(`/api/pages${q ? '?q=' + encodeURIComponent(q) : ''}`);
+    document.getElementById('all-pages-list').innerHTML = pages.map(pageCardHtml).join('') || '<p class="text-xs text-slate-500 col-span-full">Chưa có Trang nào.</p>';
+  }
+
+  async function submitCreatePage() {
+    const name = document.getElementById('cp-name').value.trim();
+    if (!name) { EduAPI.toast('Vui lòng nhập tên Trang.', 'error'); return; }
+    try {
+      const { page } = await EduAPI.request('/api/pages', { method: 'POST', body: {
+        name, category: document.getElementById('cp-category').value.trim(), bio: document.getElementById('cp-bio').value.trim()
+      }});
+      closeModal('create-page-modal');
+      EduAPI.toast('Đã tạo Trang!', 'success');
+      window.location.href = `pages.html?id=${page.id}`;
+    } catch (err) { EduAPI.toast(err.message, 'error'); }
+  }
+
+  function backToPagesList() {
+    document.getElementById('page-profile-view').classList.add('hidden');
+    document.getElementById('pages-list-view').classList.remove('hidden');
+    history.pushState({}, '', 'pages.html');
+    loadMyPages(); loadPages();
+  }
+
+  async function openPage(id) {
+    document.getElementById('pages-list-view').classList.add('hidden');
+    document.getElementById('page-profile-view').classList.remove('hidden');
+    const { page } = await EduAPI.request(`/api/pages/${id}`);
+    currentPage = page;
+    renderPage();
+    loadPageFeed();
+  }
+
+  function renderPage() {
+    const p = currentPage;
+    document.getElementById('page-name').textContent = p.name;
+    document.getElementById('page-meta').textContent = `${p.category || 'Khác'} · ${p.followerCount} người theo dõi · ${p.postCount} bài viết`;
+    document.getElementById('page-bio').textContent = p.bio || '';
+    const cover = document.getElementById('page-cover-img');
+    if (p.coverImage) { cover.src = EduAPI.fileUrl(p.coverImage); cover.classList.remove('hidden'); } else cover.classList.add('hidden');
+    document.getElementById('page-avatar-img').src = p.avatar ? EduAPI.fileUrl(p.avatar) : 'assets/img/default-avatar.svg';
+
+    document.getElementById('page-cover-edit-btn').classList.toggle('hidden', !p.isOwner);
+    document.getElementById('page-avatar-edit-btn').classList.toggle('hidden', !p.isOwner);
+    document.getElementById('page-delete-btn').classList.toggle('hidden', !p.isOwner);
+    document.getElementById('page-composer').classList.toggle('hidden', !p.isOwner);
+
+    const followBtn = document.getElementById('page-follow-btn');
+    if (p.isOwner) followBtn.classList.add('hidden');
+    else {
+      followBtn.classList.remove('hidden');
+      followBtn.innerHTML = p.isFollowing ? '<i class="fa-solid fa-check mr-1"></i>Đang theo dõi' : '<i class="fa-solid fa-plus mr-1"></i>Theo dõi';
+    }
+  }
+
+  async function togglePageFollow() {
+    const method = currentPage.isFollowing ? 'DELETE' : 'POST';
+    const { page } = await EduAPI.request(`/api/pages/${currentPage.id}/follow`, { method });
+    currentPage = page;
+    renderPage();
+  }
+  async function deleteCurrentPage() {
+    if (!confirm('Xoá Trang này vĩnh viễn? Toàn bộ bài viết của Trang cũng sẽ bị xoá.')) return;
+    await EduAPI.request(`/api/pages/${currentPage.id}`, { method: 'DELETE' });
+    EduAPI.toast('Đã xoá Trang.', 'success');
+    backToPagesList();
+  }
+
+  document.getElementById('page-cover-input').addEventListener('change', e => {
+    const file = e.target.files[0]; if (!file) return;
+    e.target.value = '';
+    EduCropper.open(file, { aspect: 16 / 6, shape: 'rect', outputSize: 1200, title: 'Chỉnh ảnh bìa Trang' }, async blob => {
+      const fd = new FormData(); fd.append('cover', blob, 'cover.jpg');
+      const { page } = await EduAPI.request(`/api/pages/${currentPage.id}/cover`, { method: 'POST', body: fd, isForm: true });
+      currentPage = page; renderPage();
+    });
+  });
+  document.getElementById('page-avatar-input').addEventListener('change', e => {
+    const file = e.target.files[0]; if (!file) return;
+    e.target.value = '';
+    EduCropper.open(file, { aspect: 1, shape: 'circle', outputSize: 512, title: 'Chỉnh ảnh đại diện Trang' }, async blob => {
+      const fd = new FormData(); fd.append('avatar', blob, 'avatar.jpg');
+      const { page } = await EduAPI.request(`/api/pages/${currentPage.id}/avatar`, { method: 'POST', body: fd, isForm: true });
+      currentPage = page; renderPage();
+    });
+  });
+
+  document.getElementById('page-post-images').addEventListener('change', e => {
+    pageComposeFiles = pageComposeFiles.concat(Array.from(e.target.files)).slice(0, 10);
+    e.target.value = '';
+    document.getElementById('page-compose-thumbs').innerHTML = pageComposeFiles.map((f, i) => `
+      <div style="position:relative;flex:0 0 auto;width:72px;height:72px;border-radius:.6rem;overflow:hidden">
+        <img src="${URL.createObjectURL(f)}" style="width:100%;height:100%;object-fit:cover">
+        <button onclick="pageComposeFiles.splice(${i},1);this.closest('div').remove()" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;width:18px;height:18px;border-radius:9999px;font-size:10px">✕</button>
+      </div>`).join('');
+  });
+
+  async function createPagePost() {
+    const content = document.getElementById('page-post-content').value.trim();
+    if (!content && !pageComposeFiles.length) return;
+    const fd = new FormData();
+    fd.append('content', content);
+    fd.append('pageId', currentPage.id);
+    pageComposeFiles.forEach(f => fd.append('images', f));
+    try {
+      await EduAPI.request('/api/posts', { method: 'POST', body: fd, isForm: true });
+      document.getElementById('page-post-content').value = '';
+      pageComposeFiles = [];
+      document.getElementById('page-compose-thumbs').innerHTML = '';
+      loadPageFeed();
+      EduAPI.toast('Đã đăng bài với tư cách Trang!', 'success');
+    } catch (err) { EduAPI.toast(err.message, 'error'); }
+  }
+
+  async function loadPageFeed() {
+    const { posts } = await EduAPI.request(`/api/posts?pageId=${currentPage.id}`);
+    EduFeed.renderList(document.getElementById('page-feed'), posts, { showAuthor: true });
+  }
+  EduFeed.setReloadCallback(loadPageFeed);
+</script>
+</body>
+</html>

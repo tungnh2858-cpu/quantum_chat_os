@@ -25,7 +25,7 @@ router.get('/', requireAuth, requireTool('social'), (req, res) => {
     const author = db.users.find(u => u.id === authorId);
     return {
       author: author ? { id: author.id, username: author.username, fullName: author.fullName, avatar: author.avatar } : null,
-      stories: stories.map(s => ({ id: s.id, image: s.image, caption: s.caption, createdAt: s.createdAt, viewers: s.viewers.length }))
+      stories: stories.map(s => ({ id: s.id, image: s.image, caption: s.caption, background: s.background || '', createdAt: s.createdAt, viewers: s.viewers.length }))
     };
   }).sort((a, b) => {
     const latest = g => Math.max(...g.stories.map(s => new Date(s.createdAt).getTime()));
@@ -34,15 +34,18 @@ router.get('/', requireAuth, requireTool('social'), (req, res) => {
   res.json({ groups });
 });
 
-// POST /api/stories  (image required, optional caption)
+// POST /api/stories  (either an image, or a text-only story with a background color — at least one of the two)
 router.post('/', requireAuth, requireTool('social'), uploadStoryImg.single('image'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'Cần chọn một ảnh cho tin.' });
+  const { caption, background, privacy } = req.body || {};
+  if (!req.file && !(caption && caption.trim())) return res.status(400).json({ error: 'Cần chọn một ảnh hoặc nhập nội dung cho tin.' });
   const db = getDB();
   const story = {
     id: uuid(),
     authorId: req.user.id,
-    image: `/uploads/stories/${req.file.filename}`,
-    caption: (req.body && req.body.caption) || '',
+    image: req.file ? `/uploads/stories/${req.file.filename}` : '',
+    caption: caption || '',
+    background: background || '',
+    privacy: ['public', 'friends'].includes(privacy) ? privacy : 'public',
     viewers: [],
     createdAt: new Date().toISOString()
   };

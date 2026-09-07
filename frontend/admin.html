@@ -91,14 +91,21 @@
     </div>
 
     <!-- Registration settings tab -->
-    <div id="admin-tab-settings" class="hidden glass-panel rounded-3xl p-6">
-      <h3 class="font-black text-sm mb-4"><i class="fa-solid fa-gear text-slate-400 mr-2"></i>Cài đặt đăng ký tài khoản</h3>
+    <div id="admin-tab-settings" class="hidden glass-panel rounded-3xl p-6 space-y-3">
+      <h3 class="font-black text-sm mb-1"><i class="fa-solid fa-gear text-slate-400 mr-2"></i>Cài đặt đăng ký & tích xanh</h3>
       <label class="flex items-center justify-between p-4 rounded-2xl bg-white/5 cursor-pointer">
         <div>
           <p class="text-sm font-bold">Yêu cầu Admin duyệt tài khoản mới</p>
           <p class="text-xs text-slate-400 mt-1">Khi bật, người đăng ký mới phải chờ bạn phê duyệt ở tab "Chờ duyệt" trước khi đăng nhập được.</p>
         </div>
         <input type="checkbox" id="require-approval-toggle" onchange="toggleRequireApproval(this.checked)" class="w-5 h-5 accent-cyan-400">
+      </label>
+      <label class="flex items-center justify-between p-4 rounded-2xl bg-white/5 cursor-pointer">
+        <div>
+          <p class="text-sm font-bold">Tự động từ chối mọi yêu cầu tích xanh</p>
+          <p class="text-xs text-slate-400 mt-1">Khi bật, mọi yêu cầu xin tích xanh mới sẽ tự động bị từ chối ngay lập tức — tab "Yêu cầu tích xanh" sẽ luôn trống.</p>
+        </div>
+        <input type="checkbox" id="auto-reject-verify-toggle" onchange="toggleAutoRejectVerification(this.checked)" class="w-5 h-5 accent-rose-400">
       </label>
     </div>
   </main>
@@ -222,6 +229,7 @@
 <script src="assets/js/particles.js?v=20260830"></script>
 <script src="assets/js/config.js?v=20260830"></script>
 <script src="assets/js/cursor.js?v=20260830"></script>
+<script src="assets/js/image-cropper.js?v=20260903"></script>
 <script src="assets/js/api.js?v=20260830"></script>
 <script src="assets/js/layout.js?v=20260830"></script>
 <script>
@@ -331,15 +339,18 @@
     document.getElementById('eu-counts-real').textContent = `${(u.friends || []).length} bạn bè thật · ${allUsersCache.filter(x => (x.following || []).includes(u.id)).length} follow thật`;
     openModal('edit-user-modal');
   }
-  document.getElementById('eu-avatar').addEventListener('change', async e => {
+  document.getElementById('eu-avatar').addEventListener('change', e => {
     const file = e.target.files[0]; if (!file || !editUserTarget) return;
-    const fd = new FormData(); fd.append('avatar', file);
-    try {
-      const { user } = await EduAPI.request(`/api/users/${editUserTarget.id}/avatar`, { method: 'POST', body: fd, isForm: true });
-      document.getElementById('eu-avatar-preview').src = EduAPI.fileUrl(user.avatar);
-      EduAPI.toast('Đã đổi ảnh đại diện.', 'success');
-      loadAccounts();
-    } catch (err) { EduAPI.toast(err.message, 'error'); }
+    e.target.value = '';
+    EduCropper.open(file, { aspect: 1, shape: 'circle', outputSize: 512, title: 'Chỉnh ảnh đại diện' }, async blob => {
+      const fd = new FormData(); fd.append('avatar', blob, 'avatar.jpg');
+      try {
+        const { user } = await EduAPI.request(`/api/users/${editUserTarget.id}/avatar`, { method: 'POST', body: fd, isForm: true });
+        document.getElementById('eu-avatar-preview').src = EduAPI.fileUrl(user.avatar);
+        EduAPI.toast('Đã đổi ảnh đại diện.', 'success');
+        loadAccounts();
+      } catch (err) { EduAPI.toast(err.message, 'error'); }
+    });
   });
   async function euToggleVerified(checked) {
     try {
@@ -385,8 +396,11 @@
   let createAvatarFile = null;
   document.getElementById('c-avatar').addEventListener('change', e => {
     const file = e.target.files[0]; if (!file) return;
-    createAvatarFile = file;
-    document.getElementById('c-avatar-preview').src = URL.createObjectURL(file);
+    e.target.value = '';
+    EduCropper.open(file, { aspect: 1, shape: 'circle', outputSize: 512, title: 'Chỉnh ảnh đại diện' }, blob => {
+      createAvatarFile = blob;
+      document.getElementById('c-avatar-preview').src = URL.createObjectURL(blob);
+    });
   });
 
   document.getElementById('create-form').addEventListener('submit', async (e) => {
@@ -401,7 +415,7 @@
     fd.append('verified', document.getElementById('c-verified').checked);
     fd.append('requireLoginOtp', document.getElementById('c-otp').checked);
     fd.append('emailOnLogin', document.getElementById('c-email-login').checked);
-    if (createAvatarFile) fd.append('avatar', createAvatarFile);
+    if (createAvatarFile) fd.append('avatar', createAvatarFile, 'avatar.jpg');
     try {
       await EduAPI.request('/api/users', { method: 'POST', body: fd, isForm: true });
       EduAPI.toast('Đã tạo tài khoản mới.', 'success');
@@ -503,12 +517,19 @@
     try {
       const { settings } = await EduAPI.request('/api/admin/settings');
       document.getElementById('require-approval-toggle').checked = !!settings.requireApproval;
+      document.getElementById('auto-reject-verify-toggle').checked = !!settings.autoRejectVerification;
     } catch (err) { EduAPI.toast(err.message, 'error'); }
   }
   async function toggleRequireApproval(checked) {
     try {
       await EduAPI.request('/api/admin/settings', { method: 'PUT', body: { requireApproval: checked } });
       EduAPI.toast(checked ? 'Đã bật: đăng ký mới cần Admin duyệt.' : 'Đã tắt: đăng ký mới tự động kích hoạt.', 'success');
+    } catch (err) { EduAPI.toast(err.message, 'error'); }
+  }
+  async function toggleAutoRejectVerification(checked) {
+    try {
+      await EduAPI.request('/api/admin/settings', { method: 'PUT', body: { autoRejectVerification: checked } });
+      EduAPI.toast(checked ? 'Đã bật: tự động từ chối yêu cầu tích xanh mới.' : 'Đã tắt: yêu cầu tích xanh sẽ chờ bạn duyệt như bình thường.', 'success');
     } catch (err) { EduAPI.toast(err.message, 'error'); }
   }
 </script>

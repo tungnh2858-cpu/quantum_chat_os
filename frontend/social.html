@@ -70,12 +70,12 @@
           </div>
           <div class="flex items-center justify-between mt-3 flex-wrap gap-2">
             <div class="flex items-center gap-2">
-              <label class="file-field-btn cursor-pointer text-xs" style="display:inline-flex;align-items:center;gap:.4rem">
-                <i class="fa-solid fa-images"></i> Thêm ảnh
+              <label class="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center cursor-pointer text-emerald-400 flex-shrink-0" title="Thêm ảnh">
+                <i class="fa-solid fa-images"></i>
                 <input type="file" id="post-images" accept="image/*" multiple class="hidden">
               </label>
-              <label class="file-field-btn cursor-pointer text-xs" style="display:inline-flex;align-items:center;gap:.4rem">
-                <i class="fa-solid fa-video"></i> Thêm video
+              <label class="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center cursor-pointer text-rose-400 flex-shrink-0" title="Thêm video">
+                <i class="fa-solid fa-video"></i>
                 <input type="file" id="post-video" accept="video/*" class="hidden">
               </label>
               <select id="post-privacy" class="select-field text-xs !py-2 !px-3">
@@ -115,19 +115,43 @@
       <h3 class="font-black text-sm"><i class="fa-solid fa-circle-plus text-fuchsia-400 mr-1"></i>Tạo tin (Story)</h3>
       <button onclick="closeModal('story-compose-modal')" class="text-slate-400"><i class="fa-solid fa-xmark"></i></button>
     </div>
-    <img id="story-preview-img" class="w-full h-64 object-cover rounded-2xl mb-3 hidden">
-    <label class="file-field-btn cursor-pointer text-xs w-full flex items-center justify-center gap-2 mb-3">
-      <i class="fa-solid fa-upload"></i> Chọn ảnh cho tin
-      <input type="file" id="story-image" accept="image/*" class="hidden">
-    </label>
-    <input id="story-caption" class="input-field text-xs mb-3" placeholder="Chú thích (không bắt buộc)">
+
+    <!-- Live preview: image (or gradient background) with caption centered, exactly like the final story -->
+    <div id="story-preview-box" class="relative w-full h-72 rounded-2xl mb-3 overflow-hidden flex items-center justify-center bg-gradient-to-br from-indigo-500 via-fuchsia-500 to-amber-400">
+      <img id="story-preview-img" class="absolute inset-0 w-full h-full object-cover hidden">
+      <div class="absolute inset-0 bg-black/10"></div>
+      <p id="story-preview-caption" class="relative z-10 text-white text-xl font-black text-center px-6 drop-shadow-lg whitespace-pre-wrap"></p>
+    </div>
+
+    <div class="flex gap-2 mb-3">
+      <label class="flex-1 file-field-btn cursor-pointer text-xs flex items-center justify-center gap-2">
+        <i class="fa-solid fa-upload"></i> Chọn ảnh
+        <input type="file" id="story-image" accept="image/*" class="hidden">
+      </label>
+      <button type="button" id="story-remove-image-btn" onclick="removeStoryImage()" class="hidden text-xs px-3 rounded-xl bg-white/5 text-rose-300"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <div id="story-bg-picker" class="flex gap-2 mb-3">
+      <span class="text-[11px] text-slate-500 self-center mr-1">Nền:</span>
+      <button type="button" onclick="setStoryBg('from-indigo-500 via-fuchsia-500 to-amber-400')" class="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 via-fuchsia-500 to-amber-400 border-2 border-white/40"></button>
+      <button type="button" onclick="setStoryBg('from-cyan-500 to-blue-600')" class="w-7 h-7 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 border-2 border-white/40"></button>
+      <button type="button" onclick="setStoryBg('from-emerald-500 to-teal-600')" class="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 border-2 border-white/40"></button>
+      <button type="button" onclick="setStoryBg('from-rose-500 to-orange-500')" class="w-7 h-7 rounded-full bg-gradient-to-br from-rose-500 to-orange-500 border-2 border-white/40"></button>
+      <button type="button" onclick="setStoryBg('from-slate-700 to-slate-900')" class="w-7 h-7 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 border-2 border-white/40"></button>
+    </div>
+
+    <input id="story-caption" class="input-field text-xs mb-3" placeholder="Nhập chữ lên tin (hiện ở giữa)..." oninput="document.getElementById('story-preview-caption').textContent = this.value">
+    <select id="story-privacy" class="select-field text-xs mb-3 w-full">
+      <option value="public">🌐 Công khai</option>
+      <option value="friends">👥 Bạn bè</option>
+    </select>
     <button onclick="submitStory()" class="btn-primary w-full text-xs">Đăng tin (hiển thị 24 giờ)</button>
   </div>
 </div>
 
 <!-- Story viewer -->
 <div id="story-view-modal" class="modal-backdrop hidden">
-  <div class="relative w-full max-w-sm h-[80vh] rounded-3xl overflow-hidden bg-black">
+  <div id="story-view-box" class="relative w-full max-w-sm h-[80vh] rounded-3xl overflow-hidden bg-black flex items-center justify-center">
     <div id="story-progress" class="absolute top-2 left-2 right-2 flex gap-1 z-20"></div>
     <div class="absolute top-6 left-2 right-2 flex items-center gap-2 z-20">
       <div id="story-view-avatar" class="w-8 h-8 rounded-full overflow-hidden bg-white/20"></div>
@@ -136,8 +160,9 @@
       <button id="story-delete-btn" onclick="deleteCurrentStory()" class="ml-auto text-white/80 hidden"><i class="fa-solid fa-trash"></i></button>
       <button onclick="closeModal('story-view-modal')" class="text-white/80"><i class="fa-solid fa-xmark text-lg"></i></button>
     </div>
-    <img id="story-view-img" class="w-full h-full object-contain bg-black">
-    <p id="story-view-caption" class="absolute bottom-4 left-4 right-4 text-white text-sm text-center drop-shadow"></p>
+    <img id="story-view-img" class="absolute inset-0 w-full h-full object-cover hidden">
+    <div id="story-view-dim" class="absolute inset-0 bg-black/10 hidden"></div>
+    <p id="story-view-caption" class="relative z-10 text-white text-2xl font-black text-center px-8 drop-shadow-lg whitespace-pre-wrap"></p>
     <button onclick="storyNav(-1)" class="absolute left-0 top-0 bottom-0 w-1/3 z-10"></button>
     <button onclick="storyNav(1)" class="absolute right-0 top-0 bottom-0 w-1/3 z-10"></button>
   </div>
@@ -292,7 +317,7 @@
     const me = EduAPI.getUser();
     const mine = groups.find(g => g.author && g.author.id === me.id);
     let html = `
-      <div class="story-bubble" onclick="openModal('story-compose-modal')">
+      <div class="story-bubble" onclick="openStoryComposer()">
         <div class="relative">
           ${avatarHtml(me, 20)}
           <div class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-cyan-400 text-brand-950 flex items-center justify-center text-xs font-black border-2 border-brand-950"><i class="fa-solid fa-plus"></i></div>
@@ -301,28 +326,64 @@
       </div>`;
     html += groups.map((g, gi) => g.author ? `
       <div class="story-bubble" onclick="viewStory(${gi})">
-        <div class="story-ring"><img src="${EduAPI.fileUrl(g.stories[0].image)}" class="story-thumb" onerror="this.onerror=null;this.src='assets/img/broken-image.svg'"></div>
+        <div class="story-ring">${g.stories[0].image
+          ? `<img src="${EduAPI.fileUrl(g.stories[0].image)}" class="story-thumb" onerror="this.onerror=null;this.src='assets/img/broken-image.svg'">`
+          : `<div class="story-thumb bg-gradient-to-br ${g.stories[0].background || 'from-indigo-500 via-fuchsia-500 to-amber-400'} flex items-center justify-center px-1">
+              <span class="text-white text-[10px] font-bold text-center leading-tight" style="display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden">${escapeHtml(g.stories[0].caption || '')}</span>
+            </div>`}</div>
         <p class="text-[10px] text-center mt-1 font-bold truncate w-[88px]">${g.author.id === me.id ? 'Tin của bạn' : (g.author.fullName || g.author.username)}</p>
       </div>` : '').join('');
     document.getElementById('stories-bar').innerHTML = html;
   }
 
+  function openStoryComposer() {
+    removeStoryImage();
+    setStoryBg('from-indigo-500 via-fuchsia-500 to-amber-400');
+    document.getElementById('story-caption').value = '';
+    document.getElementById('story-preview-caption').textContent = '';
+    document.getElementById('story-privacy').value = 'public';
+    openModal('story-compose-modal');
+  }
+
   document.getElementById('story-image').addEventListener('change', e => {
     storyFile = e.target.files[0] || null;
     const img = document.getElementById('story-preview-img');
-    if (storyFile) { img.src = URL.createObjectURL(storyFile); img.classList.remove('hidden'); }
+    if (storyFile) {
+      img.src = URL.createObjectURL(storyFile);
+      img.classList.remove('hidden');
+      document.getElementById('story-bg-picker').classList.add('hidden');
+      document.getElementById('story-remove-image-btn').classList.remove('hidden');
+    }
   });
+  function removeStoryImage() {
+    storyFile = null;
+    document.getElementById('story-image').value = '';
+    document.getElementById('story-preview-img').classList.add('hidden');
+    document.getElementById('story-bg-picker').classList.remove('hidden');
+    document.getElementById('story-remove-image-btn').classList.add('hidden');
+  }
+  let storyBgClass = 'from-indigo-500 via-fuchsia-500 to-amber-400';
+  function setStoryBg(cls) {
+    storyBgClass = cls;
+    const box = document.getElementById('story-preview-box');
+    box.className = `relative w-full h-72 rounded-2xl mb-3 overflow-hidden flex items-center justify-center bg-gradient-to-br ${cls}`;
+  }
   async function submitStory() {
-    if (!storyFile) { EduAPI.toast('Hãy chọn một ảnh.', 'error'); return; }
+    if (!storyFile && !document.getElementById('story-caption').value.trim()) {
+      EduAPI.toast('Hãy chọn ảnh hoặc nhập chữ cho tin.', 'error'); return;
+    }
     const fd = new FormData();
-    fd.append('image', storyFile);
+    if (storyFile) fd.append('image', storyFile);
+    else fd.append('background', storyBgClass);
     fd.append('caption', document.getElementById('story-caption').value.trim());
+    fd.append('privacy', document.getElementById('story-privacy').value);
     try {
       await EduAPI.request('/api/stories', { method: 'POST', body: fd, isForm: true });
       storyFile = null;
       document.getElementById('story-image').value = '';
       document.getElementById('story-caption').value = '';
-      document.getElementById('story-preview-img').classList.add('hidden');
+      document.getElementById('story-preview-caption').textContent = '';
+      removeStoryImage();
       closeModal('story-compose-modal');
       loadStories();
       EduAPI.toast('Đã đăng tin! Tin sẽ tự ẩn sau 24 giờ.', 'success');
@@ -340,7 +401,18 @@
     if (!group) { closeModal('story-view-modal'); return; }
     const story = group.stories[storyIdx];
     const me = EduAPI.getUser();
-    document.getElementById('story-view-img').src = EduAPI.fileUrl(story.image);
+    const box = document.getElementById('story-view-box');
+    const img = document.getElementById('story-view-img');
+    if (story.image) {
+      img.src = EduAPI.fileUrl(story.image);
+      img.classList.remove('hidden');
+      document.getElementById('story-view-dim').classList.remove('hidden');
+      box.className = 'relative w-full max-w-sm h-[80vh] rounded-3xl overflow-hidden bg-black flex items-center justify-center';
+    } else {
+      img.classList.add('hidden');
+      document.getElementById('story-view-dim').classList.add('hidden');
+      box.className = `relative w-full max-w-sm h-[80vh] rounded-3xl overflow-hidden bg-gradient-to-br ${story.background || 'from-indigo-500 via-fuchsia-500 to-amber-400'} flex items-center justify-center`;
+    }
     document.getElementById('story-view-name').textContent = group.author.fullName || group.author.username;
     document.getElementById('story-view-time').textContent = new Date(story.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
     document.getElementById('story-view-caption').textContent = story.caption || '';

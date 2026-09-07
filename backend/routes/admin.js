@@ -17,10 +17,11 @@ router.get('/settings', requireAuth, requireAdmin, (req, res) => {
   res.json({ settings: db.adminSettings });
 });
 
-// PUT /api/admin/settings  { requireApproval: true|false }
+// PUT /api/admin/settings  { requireApproval?: bool, autoRejectVerification?: bool }
 router.put('/settings', requireAuth, requireAdmin, (req, res) => {
   const db = getDB();
   if (typeof req.body.requireApproval === 'boolean') db.adminSettings.requireApproval = req.body.requireApproval;
+  if (typeof req.body.autoRejectVerification === 'boolean') db.adminSettings.autoRejectVerification = req.body.autoRejectVerification;
   saveDB(db);
   res.json({ settings: db.adminSettings });
 });

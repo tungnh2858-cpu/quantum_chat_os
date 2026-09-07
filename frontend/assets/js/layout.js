@@ -8,6 +8,7 @@ const EduLayout = (() => {
     { id: 'reels', href: 'reels.html', icon: 'fa-clapperboard', label: 'Reels', color: 'text-fuchsia-400' },
     { id: 'friends', href: 'friends.html', icon: 'fa-user-group', label: 'Bạn Bè', color: 'text-cyan-400' },
     { id: 'messages', href: 'messages.html', icon: 'fa-comment-dots', label: 'Tin Nhắn', color: 'text-sky-400' },
+    { id: 'pages', href: 'pages.html', icon: 'fa-flag', label: 'Trang (Fanpage)', color: 'text-amber-400' },
     { id: 'accounts', href: 'admin.html', icon: 'fa-users-gear', label: 'Quản Lý Người Dùng', color: 'text-rose-500', adminOnly: true },
     { id: 'settings', href: 'settings.html', icon: 'fa-gear', label: 'Cài Đặt Tài Khoản', color: 'text-slate-400' }
   ];
@@ -104,10 +105,38 @@ const EduLayout = (() => {
     injectBottomNav(activeId, user);
     injectMoreSheet(user);
     injectNotifPanel();
+    injectPermissionBanner();
     refreshNotifications();
     refreshMessageBadge();
     if (notifPollTimer) clearInterval(notifPollTimer);
     notifPollTimer = setInterval(() => { refreshNotifications(); refreshMessageBadge(); }, 30000);
+  }
+
+  function injectPermissionBanner() {
+    if (!('Notification' in window)) return; // unsupported browser — skip silently
+    if (Notification.permission !== 'default') return; // already granted/denied, or previously handled
+    if (localStorage.getItem('edu_notif_banner_dismissed') === '1') return;
+    if (document.getElementById('notif-permission-banner')) return;
+
+    const html = `
+    <div id="notif-permission-banner" class="fixed bottom-20 lg:bottom-6 left-1/2 -translate-x-1/2 z-[1800] w-[92vw] max-w-md glass-panel rounded-2xl p-4 shadow-2xl flex items-start gap-3">
+      <div class="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-fuchsia-500 flex items-center justify-center text-white flex-shrink-0"><i class="fa-solid fa-bell"></i></div>
+      <div class="flex-1">
+        <p class="text-sm font-bold">Cho phép nhận thông báo?</p>
+        <p class="text-[11px] text-slate-400 mt-0.5">Nhận thông báo ngay khi có tin nhắn, lời mời kết bạn, hoặc bình luận mới.</p>
+        <div class="flex gap-2 mt-3">
+          <button onclick="EduLayout.dismissPermissionBanner(false)" class="text-xs px-3 py-1.5 rounded-xl bg-white/5">Để sau</button>
+          <button onclick="EduLayout.dismissPermissionBanner(true)" class="text-xs px-3 py-1.5 rounded-xl btn-primary">Cho phép</button>
+        </div>
+      </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+  }
+  function dismissPermissionBanner(requestPermission) {
+    localStorage.setItem('edu_notif_banner_dismissed', '1');
+    const el = document.getElementById('notif-permission-banner');
+    if (el) el.remove();
+    if (requestPermission && 'Notification' in window) Notification.requestPermission();
   }
 
   function injectBottomNav(activeId, user) {
@@ -141,6 +170,7 @@ const EduLayout = (() => {
       { icon: 'fa-user-group', bg: 'from-cyan-500 to-blue-500', label: 'Bạn bè', href: 'friends.html' },
       { icon: 'fa-comment-dots', bg: 'from-sky-500 to-cyan-500', label: 'Tin nhắn', href: 'messages.html' },
       { icon: 'fa-clapperboard', bg: 'from-fuchsia-500 to-pink-500', label: 'Reels', href: 'reels.html' },
+      { icon: 'fa-flag', bg: 'from-amber-500 to-orange-500', label: 'Trang (Fanpage)', href: 'pages.html' },
       { icon: 'fa-bell', bg: 'from-amber-500 to-orange-500', label: 'Thông báo', action: 'toggleNotifPanel' },
       user.role === 'admin' ? { icon: 'fa-users-gear', bg: 'from-rose-500 to-red-500', label: 'Quản lý người dùng', href: 'admin.html' } : null,
       { icon: 'fa-gear', bg: 'from-slate-500 to-slate-600', label: 'Cài đặt tài khoản', href: 'settings.html' },
@@ -281,6 +311,7 @@ const EduLayout = (() => {
   return {
     render, guard, logout, toggleTheme, applyTheme, NAV,
     toggleMoreSheet, toggleNotifPanel, refreshNotifications, markNotifRead, markAllNotifsRead, refreshMessageBadge,
+    dismissPermissionBanner,
     initials, avatarHtml, verifiedBadge, timeAgo
   };
 })();

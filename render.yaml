@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: edupulse-backend
+    name: quantum-chat-os
     env: node
     plan: free
     rootDir: backend

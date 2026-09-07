@@ -19,6 +19,7 @@ const friendRoutes = require('./routes/friends');
 const notificationRoutes = require('./routes/notifications');
 const reelRoutes = require('./routes/reels');
 const adminRoutes = require('./routes/admin');
+const pageRoutes = require('./routes/pages');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -44,6 +45,7 @@ app.use('/api/friends', friendRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reels', reelRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/pages', pageRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, name: 'Quantum Chat OS API', time: new Date().toISOString() });
